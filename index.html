@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eco Repair Solutions</title>
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom right, #eaf8ea, #cde8cd);
+    color: #333;
+    scroll-behavior: smooth;
+  }
+  header {
+    background: #2b6c2b;
+    color: white;
+    padding: 1rem 0;
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: bold;
+  }
+  nav {
+    background: #3c8c3c;
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    padding: 0.5rem;
+  }
+  nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  nav a:hover {
+    text-decoration: underline;
+  }
+  section {
+    padding: 2rem;
+    max-width: 900px;
+    margin: auto;
+  }
+  #products {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+  .product {
+    background: white;
+    border-radius: 0.6rem;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+  }
+  .product:hover {
+    transform: scale(1.03);
+  }
+  .product h3 {
+    color: #2b6c2b;
+  }
+  button {
+    background: #2b6c2b;
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 0.4rem;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #3c8c3c;
+  }
+  #cart, #checkout {
+    background: #ffffff;
+    border-radius: 0.6rem;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  #chatbox {
+    position: fixed;
+    bottom: 0;
+    right: 20px;
+    width: 320px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 0.6rem 0.6rem 0 0;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+  }
+  #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.8rem;
+  }
+  .message {
+    margin: 0.5rem 0;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.8rem;
+  }
+  .user { background: #d9ffd9; margin-left: auto; max-width: 80%; }
+  .bot { background: #f1f1f1; margin-right: auto; max-width: 80%; }
+  #chat-input {
+    display: flex;
+    border-top: 1px solid #ccc;
+  }
+  #chat-input input {
+    flex: 1;
+    border: none;
+    padding: 0.8rem;
+  }
+  #chat-input button {
+    border: none;
+    background: #2b6c2b;
+    color: white;
+    padding: 0.8rem 1.2rem;
+  }
+  footer {
+    background: #2b6c2b;
+    color: white;
+    text-align: center;
+    padding: 1rem;
+  }
+  input, select, textarea {
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: 0.4rem;
+    border-radius: 0.4rem;
+    border: 1px solid #ccc;
+  }
+</style>
+</head>
+<body>
+
+<header>Eco Repair Solutions</header>
+
+<nav>
+  <a href="#overview">Company Overview</a>
+  <a href="#products">Products</a>
+  <a href="#cart">Cart</a>
+  <a href="#checkout">Checkout</a>
+  <a href="#contact">Contact Us</a>
+</nav>
+
+<section id="overview">
+  <h2>Company Overview</h2>
+  <p>Eco Repair Solutions is dedicated to reducing the environmental impact of construction repairs. We provide eco-friendly alternatives made from renewable and recycled materials such as bamboo, coconut fiber, and fly-ash-based cement. Our mission is to promote sustainable construction while supporting local industries and reducing waste.</p>
+</section>
+
+<section id="products">
+  <h2>Our Products</h2>
+  <div class="product">
+    <h3>Bamboo Reinforcement Bar</h3>
+    <p>Strong, sustainable, and affordable substitute for steel rebars.</p>
+    <p><b>₱250 per piece</b></p>
+    <button onclick="addToCart('Bamboo Reinforcement Bar', 250)">Add to Cart</button>
+  </div>
+  <div class="product">
+    <h3>Coconut Fiber Board</h3>
+    <p>Lightweight and durable material for wall and ceiling applications.</p>
+    <p><b>₱180 per board</b></p>
+    <button onclick="addToCart('Coconut Fiber Board', 180)">Add to Cart</button>
+  </div>
+  <div class="product">
+    <h3>Recycled Plastic Paver</h3>
+    <p>Eco-friendly paving solution made from recycled materials.</p>
+    <p><b>₱120 per piece</b></p>
+    <button onclick="addToCart('Recycled Plastic Paver', 120)">Add to Cart</button>
+  </div>
+</section>
+
+<section id="cart">
+  <h2>Your Cart</h2>
+  <ul id="cart-items"></ul>
+  <p><b>Total: ₱<span id="total">0</span></b></p>
+</section>
+
+<section id="checkout">
+  <h2>Checkout</h2>
+  <form id="checkoutForm">
+    <label for="address">Delivery Address:</label>
+    <textarea id="address" required placeholder="Enter your complete address"></textarea>
+    
+    <label for="payment">Mode of Payment:</label>
+    <select id="payment" required>
+      <option value="">Select Payment Method</option>
+      <option value="Gcash">GCash</option>
+      <option value="Bank">Bank Transfer</option>
+      <option value="COD">Cash on Delivery</option>
+    </select>
+    <button type="submit">Confirm Order</button>
+  </form>
+</section>
+
+<section id="contact">
+  <h2>Contact Us</h2>
+  <p>📍 Address: Green Avenue, Quezon City, Philippines</p>
+  <p>📞 Phone: +63 912 345 6789</p>
+  <p>📧 Email: support@ecorepair.ph</p>
+</section>
+
+<footer>
+  © 2025 Eco Repair Solutions. All Rights Reserved.
+</footer>
+
+<!-- Chat AI Box -->
+<div id="chatbox">
+  <div id="chat-messages"></div>
+  <div id="chat-input">
+    <input type="text" id="userText" placeholder="Ask something..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+</div>
+
+<script>
+  let cart = [];
+  function addToCart(name, price) {
+    cart.push({ name, price });
+    updateCart();
+    alert(name + " added to cart!");
+  }
+  function updateCart() {
+    const list = document.getElementById('cart-items');
+    const total = document.getElementById('total');
+    list.innerHTML = '';
+    let sum = 0;
+    cart.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = `${item.name} - ₱${item.price}`;
+      list.appendChild(li);
+      sum += item.price;
+    });
+    total.textContent = sum;
+  }
+
+  document.getElementById('checkoutForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const address = document.getElementById('address').value.trim();
+    const payment = document.getElementById('payment').value;
+    if (cart.length === 0) return alert("Your cart is empty!");
+    alert(`Order confirmed!\nAddress: ${address}\nPayment: ${payment}\nThank you for choosing Eco Repair Solutions!`);
+    cart = [];
+    updateCart();
+    e.target.reset();
+  });
+
+  const messages = document.getElementById('chat-messages');
+  function appendMessage(sender, text) {
+    const msg = document.createElement('div');
+    msg.classList.add('message', sender);
+    msg.textContent = text;
+    messages.appendChild(msg);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function botReply(text) {
+    text = text.toLowerCase();
+    if (text.includes("price")) return "Our prices are listed beside each product.";
+    if (text.includes("bamboo")) return "Our Bamboo Reinforcement Bars are strong and affordable!";
+    if (text.includes("order")) return "You can add products to cart and check out below.";
+    if (text.includes("hello") || text.includes("hi")) return "Hi there! How can I help you with your eco-repair needs?";
+    return "I'm here to help with products, pricing, or checkout info!";
+  }
+
+  function sendMessage() {
+    const input = document.getElementById('userText');
+    const text = input.value.trim();
+    if (!text) return;
+    appendMessage('user', text);
+    input.value = '';
+    setTimeout(() => appendMessage('bot', botReply(text)), 700);
+  }
+
+  appendMessage('bot', "👋 Hello! I'm your Eco Repair Assistant. How can I help today?");
+</script>
+</body>
+</html>
