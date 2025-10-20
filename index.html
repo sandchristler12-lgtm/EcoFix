@@ -1,355 +1,192 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>EcoFix – Sustainable Repair Solutions</title>
 <style>
-  :root {
-    --green: #2e7d32;
-    --green-dark: #236127;
-    --accent: #43a047;
-    --bg: #f0f8f5;
-  }
-
-  body {
-    font-family: "Segoe UI", sans-serif;
-    margin: 0;
-    background: var(--bg);
-    color: #222;
-  }
-
-  header {
-    background: var(--green);
-    color: white;
-    padding: 1rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  header img {
-    height: 50px;
-    border-radius: 8px;
-  }
-
-  nav a {
-    color: white;
-    text-decoration: none;
-    margin: 0 10px;
-    font-weight: 500;
-  }
-
-  nav a:hover {
-    text-decoration: underline;
-  }
-
-  main {
-    padding: 2rem;
-  }
-
-  section {
-    display: none;
-  }
-
-  section.active {
-    display: block;
-  }
-
-  h1, h2 {
-    color: var(--green-dark);
-  }
-
-  .product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    gap: 1rem;
-  }
-
-  .product {
-    background: white;
-    padding: 1rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    text-align: center;
-  }
-
-  .product img {
-    width: 100%;
-    height: 180px;
-    object-fit: cover;
-    border-radius: 10px;
-  }
-
-  button {
-    background: var(--green);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-  }
-
-  button:hover {
-    background: var(--green-dark);
-  }
-
-  .cart-item, .receipt {
-    background: white;
-    padding: 1rem;
-    margin-bottom: 0.5rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-
-  .chat-box {
-    background: white;
-    border-radius: 12px;
-    padding: 1rem;
-    height: 400px;
-    overflow-y: auto;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  }
-
-  .chat-input {
-    margin-top: 10px;
-    display: flex;
-  }
-
-  .chat-input input {
-    flex: 1;
-    padding: 0.5rem;
-    border-radius: 8px 0 0 8px;
-    border: 1px solid #ccc;
-  }
-
-  .chat-input button {
-    border-radius: 0 8px 8px 0;
-  }
-
-  .typing-dot {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    margin: 0 2px;
-    background: #999;
-    border-radius: 50%;
-    animation: blink 1s infinite alternate;
-  }
-
-  @keyframes blink {
-    from { opacity: 0.2; }
-    to { opacity: 1; }
-  }
-
-  footer {
-    background: var(--green-dark);
-    color: white;
-    text-align: center;
-    padding: 1rem;
-    margin-top: 2rem;
-  }
+  :root{--green:#2e7d32;--accent:#43a047;--bg:#f0f8f5;}
+  body{font-family:"Poppins",sans-serif;margin:0;background:var(--bg);color:#222;}
+  header{display:flex;align-items:center;gap:15px;justify-content:center;background:var(--green);color:#fff;padding:18px;}
+  header img{width:60px;height:60px;border-radius:10px;object-fit:cover}
+  header h1{margin:0;font-size:1.25rem;}
+  .container{max-width:1000px;margin:22px auto;padding:0 18px;}
+  .overview{background:#e8f5e9;padding:18px;border-radius:12px;margin-bottom:20px;}
+  h2{color:var(--green)}
+  .products{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;}
+  .product{background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06);text-align:center;transition:transform .18s ease,box-shadow .18s;}
+  .product:hover{transform:translateY(-6px);box-shadow:0 14px 30px rgba(0,0,0,0.08);}
+  .product img{width:100%;height:170px;object-fit:cover;border-radius:10px}
+  .product h3{margin:10px 0 6px;color:#2e7d32}
+  .product p{margin:0 0 10px;color:#555;font-size:.95rem}
+  .product .price{font-weight:700;color:#111;margin-bottom:8px}
+  .btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:999px;cursor:pointer;font-weight:600;transition:transform .12s,background .12s}
+  .btn:hover{transform:scale(1.03);background:#236127}
+  .cart{background:#f6fff6;padding:14px;border-radius:12px;margin-top:20px}
+  #cartList{list-style:none;padding:0;margin:0}
+  #cartList li{padding:8px 0;border-bottom:1px dashed #ddd;display:flex;justify-content:space-between;align-items:center}
+  #cartList li:last-child{border-bottom:none}
+  .checkout{background:#eaf7ea;padding:16px;border-radius:12px;margin-top:18px}
+  .checkout input,.checkout select{width:100%;padding:10px;border-radius:10px;border:1px solid #d9d9d9;margin-top:8px}
+  .contact{background:#e8f5e9;padding:16px;border-radius:12px;margin-top:18px}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9999}
+  .receipt{width:360px;background:#fff;border-radius:12px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);}
+  .refund-form{display:none;margin-top:10px;padding:10px;background:#fff8e1;border-radius:8px}
+  .refund-form input,.refund-form select,.refund-form textarea{width:100%;padding:8px;margin-top:5px;border-radius:8px;border:1px solid #ddd}
+  .refund-confirm{background:#dff0d8;color:#2e7d32;padding:8px;border-radius:8px;margin-top:10px;display:none}
+  /* Chat */
+  .chat-fab{position:fixed;right:22px;bottom:22px;width:64px;height:64px;border-radius:18px;background:linear-gradient(180deg,var(--accent),#06b6d4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;cursor:pointer;box-shadow:0 12px 30px rgba(2,6,23,0.4);z-index:999}
+  .chat-panel{position:fixed;right:22px;bottom:100px;width:340px;max-height:68vh;background:#fff;border-radius:14px;box-shadow:0 12px 36px rgba(2,6,23,0.35);display:none;flex-direction:column;overflow:hidden;z-index:999}
+  .chat-header{padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,#f6fff6,#ffffff)}
+  .chat-body{padding:12px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px;background:#fbfffb}
+  .chat-input{display:flex;border-top:1px solid #eee;padding:8px;gap:8px}
+  .bubble{display:inline-block;padding:8px 12px;border-radius:12px;max-width:84%}
+  .bubble.user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+  .bubble.ai{background:#f1f1f1;color:#111;align-self:flex-start;border-bottom-left-radius:4px}
 </style>
 </head>
 <body>
 
 <header>
-  <div style="display:flex;align-items:center;gap:10px;">
-    <img src="https://i.imgur.com/zq8uWkJ.png" alt="EcoFix Logo">
-    <h2>EcoFix</h2>
-  </div>
-  <nav>
-    <a href="#" onclick="showPage('home')">Home</a>
-    <a href="#" onclick="showPage('shop')">Shop</a>
-    <a href="#" onclick="showPage('assistant')">AI Assistant</a>
-    <a href="#" onclick="showPage('orders')">Orders</a>
-    <a href="#" onclick="showPage('contact')">Contact</a>
-  </nav>
+  <img src="logo.png" alt="EcoFix Logo" onerror="this.src='https://via.placeholder.com/80x80?text=EcoFix'">
+  <h1>EcoFix – Sustainable Repair Solutions</h1>
 </header>
 
-<main>
-  <!-- Home -->
-  <section id="home" class="active">
-    <h1>Welcome to EcoFix</h1>
-    <p>We provide sustainable repair solutions using eco-friendly materials like bamboo, fly ash concrete, and recycled aggregates. Join us in building a greener future.</p>
-  </section>
+<div class="container">
+  <div class="overview">
+    <h2>Company Overview</h2>
+    <p><strong>EcoFix</strong> provides green repair materials like bamboo, coconut fiber, fly ash concrete, and recycled aggregates for sustainable construction.</p>
+  </div>
 
-  <!-- Shop -->
-  <section id="shop">
-    <h2>Shop Sustainable Materials</h2>
-    <div class="product-grid">
-      <div class="product">
-        <img src="https://i.imgur.com/EFwkpGj.jpg" alt="Fly Ash Concrete">
-        <h3>Fly Ash Concrete</h3>
-        <p>Durable and eco-friendly alternative to standard concrete.</p>
-        <p><strong>₱350 / bag</strong></p>
-        <button onclick="addToCart('Fly Ash Concrete', 350)">Add to Cart</button>
-      </div>
-      <div class="product">
-        <img src="https://i.imgur.com/Z7wA8vL.jpg" alt="Recycled Aggregates">
-        <h3>Recycled Aggregates</h3>
-        <p>High-quality materials from repurposed construction waste.</p>
-        <p><strong>₱280 / sack</strong></p>
-        <button onclick="addToCart('Recycled Aggregates', 280)">Add to Cart</button>
-      </div>
-      <div class="product">
-        <img src="https://i.imgur.com/a2IQShK.jpg" alt="Bamboo Reinforcement">
-        <h3>Bamboo Reinforcement</h3>
-        <p>Renewable substitute for steel reinforcements in repairs.</p>
-        <p><strong>₱220 / unit</strong></p>
-        <button onclick="addToCart('Bamboo Reinforcement', 220)">Add to Cart</button>
-      </div>
+  <h2>Products</h2>
+  <div class="products">
+    <div class="product" data-name="Bamboo Reinforcement" data-price="250">
+      <img src="bamboo.jpg" onerror="this.src='https://via.placeholder.com/400x300?text=Bamboo'">
+      <h3>Bamboo Reinforcement</h3>
+      <p>Strong, renewable reinforcement for repairs.</p>
+      <div class="price">₱250</div><button class="btn add-to-cart">Add to Cart</button>
     </div>
-  </section>
-
-  <!-- AI Assistant -->
-  <section id="assistant">
-    <h2>EcoFix AI Assistant</h2>
-    <div class="chat-box" id="chatBox">
-      <p><strong>EcoFix Assistant:</strong> Hi there! How can I assist you today? 😊</p>
+    <div class="product" data-name="Coconut Fiber Board" data-price="300">
+      <img src="coco.jpg" onerror="this.src='https://via.placeholder.com/400x300?text=Coconut'">
+      <h3>Coconut Fiber Board</h3>
+      <p>Durable and sustainable insulation board.</p>
+      <div class="price">₱300</div><button class="btn add-to-cart">Add to Cart</button>
     </div>
-    <div class="chat-input">
-      <input id="chatInput" placeholder="Type your question..." />
-      <button onclick="sendChat()">Send</button>
+    <div class="product" data-name="Fly Ash Concrete" data-price="220">
+      <img src="flyash.jpg" onerror="this.src='https://via.placeholder.com/400x300?text=Fly+Ash'">
+      <h3>Fly Ash Concrete</h3>
+      <p>Eco-friendly high-performance concrete mix.</p>
+      <div class="price">₱220</div><button class="btn add-to-cart">Add to Cart</button>
     </div>
-  </section>
+    <div class="product" data-name="Recycled Aggregates" data-price="180">
+      <img src="aggregate.jpg" onerror="this.src='https://via.placeholder.com/400x300?text=Aggregate'">
+      <h3>Recycled Aggregates</h3>
+      <p>Processed from construction debris for reuse.</p>
+      <div class="price">₱180</div><button class="btn add-to-cart">Add to Cart</button>
+    </div>
+  </div>
 
-  <!-- Orders -->
-  <section id="orders">
-    <h2>Your Orders</h2>
-    <div id="cartItems"></div>
-    <button onclick="checkout()">Confirm Order</button>
-    <h3>Receipt</h3>
-    <div id="receipt"></div>
-    <h3>Need a Refund?</h3>
-    <button onclick="refundOrder()">Request Refund</button>
-    <div id="refundMessage" style="margin-top:10px;"></div>
-  </section>
+  <div class="cart">
+    <h2>Cart</h2><ul id="cartList"></ul><h3 id="cartTotal">Total: ₱0</h3>
+  </div>
 
-  <!-- Contact -->
-  <section id="contact">
+  <div class="checkout">
+    <h2>Checkout</h2>
+    <input id="custName" placeholder="Full name">
+    <input id="custAddress" placeholder="Address">
+    <select id="custPayment">
+      <option value="">Mode of Payment</option>
+      <option>Gcash</option><option>Bank</option><option>COD</option>
+    </select>
+    <button id="placeOrderBtn" class="btn">Place Order</button>
+  </div>
+
+  <div class="contact">
     <h2>Contact Us</h2>
-    <p>Email: ecofix.ph@gmail.com</p>
-    <p>Phone: +63 912 345 6789</p>
-    <p>Address: Quezon City, Metro Manila</p>
-  </section>
-</main>
+    <p>Email: support@ecofix.com | Phone: +63 912 345 6789</p>
+  </div>
+</div>
 
-<footer>
-  <p>© 2025 EcoFix. Building a Greener Tomorrow.</p>
-</footer>
+<!-- Receipt Modal -->
+<div class="modal-backdrop" id="receiptModal">
+  <div class="receipt">
+    <h3>EcoFix Receipt</h3>
+    <div id="receiptInfo"></div>
+    <button id="refundBtn" class="btn" style="background:#f57c00;margin-top:10px;">Request Refund</button>
+    <div class="refund-form" id="refundForm">
+      <input id="refundOrderId" readonly>
+      <textarea id="refundReason" placeholder="Reason for refund..."></textarea>
+      <select id="refundMode">
+        <option value="">Refund Mode</option>
+        <option>GCash</option><option>Bank</option><option>Store Credit</option>
+      </select>
+      <button id="submitRefund" class="btn" style="margin-top:8px;">Submit Refund</button>
+      <div class="refund-confirm" id="refundConfirm">✅ Refund request submitted!</div>
+    </div>
+    <button onclick="closeReceipt()" class="btn" style="margin-top:10px;background:#ccc;color:#111;">Close</button>
+  </div>
+</div>
+
+<!-- Chat Assistant -->
+<div class="chat-fab" id="chatFab">💬</div>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header"><b>EcoAssist</b><button id="closeChat" class="btn" style="background:#eee;color:#111;padding:5px 8px;border-radius:8px;">Close</button></div>
+  <div class="chat-body" id="chatBody"></div>
+  <div class="chat-input">
+    <input id="chatInput" placeholder="Ask EcoAssist..." style="flex:1;padding:10px;border:none;outline:none">
+    <button id="chatSend" class="btn">Send</button>
+  </div>
+</div>
 
 <script>
-let cart = [];
+let cart=[];
+const cartList=document.getElementById('cartList'),cartTotal=document.getElementById('cartTotal');
+function renderCart(){cartList.innerHTML='';let total=0;cart.forEach((c,i)=>{total+=c.price*c.qty;cartList.innerHTML+=`<li>${c.name} x${c.qty} ₱${c.price*c.qty} <button onclick='cart.splice(${i},1);renderCart()'>🗑️</button></li>`});cartTotal.textContent='Total: ₱'+total;}
+document.querySelectorAll('.add-to-cart').forEach(btn=>btn.onclick=()=>{const p=btn.parentElement;const name=p.dataset.name;const price=+p.dataset.price;const item=cart.find(x=>x.name==name);item?item.qty++:cart.push({name,price,qty:1});renderCart();});
 
-// Navigation
-function showPage(id) {
-  document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
+const receiptModal=document.getElementById('receiptModal'),receiptInfo=document.getElementById('receiptInfo');
+document.getElementById('placeOrderBtn').onclick=()=>{
+  const n=document.getElementById('custName').value.trim(),a=document.getElementById('custAddress').value.trim(),p=document.getElementById('custPayment').value;
+  if(!n||!a||!p||cart.length==0){alert('Complete checkout details');return;}
+  const id='ECO'+Date.now().toString().slice(-5);
+  receiptModal.style.display='flex';
+  receiptInfo.innerHTML=`<p><b>Order ID:</b> ${id}</p><p><b>Name:</b> ${n}</p><p><b>Address:</b> ${a}</p><p><b>Payment:</b> ${p}</p>`;
+  document.getElementById('refundOrderId').value=id;
+  cart=[];renderCart();
+};
 
-// Cart functions
-function addToCart(item, price) {
-  cart.push({ item, price });
-  alert(item + " added to cart!");
-  renderCart();
-}
+function closeReceipt(){receiptModal.style.display='none';}
 
-function renderCart() {
-  const container = document.getElementById("cartItems");
-  container.innerHTML = "";
-  cart.forEach(c => {
-    container.innerHTML += `<div class="cart-item">${c.item} – ₱${c.price}</div>`;
-  });
-}
+/* Refund logic */
+const refundBtn=document.getElementById('refundBtn'),refundForm=document.getElementById('refundForm'),refundConfirm=document.getElementById('refundConfirm');
+refundBtn.onclick=()=>refundForm.style.display=refundForm.style.display==='block'?'none':'block';
+document.getElementById('submitRefund').onclick=()=>{
+  const reason=document.getElementById('refundReason').value.trim(),mode=document.getElementById('refundMode').value;
+  if(!reason||!mode){alert('Please fill out refund details');return;}
+  refundConfirm.style.display='block';
+  addAIMessage("EcoAssist: Your refund request has been received and is being processed. We'll contact you soon!");
+  refundForm.querySelectorAll('input,textarea,select,button').forEach(e=>e.disabled=true);
+};
 
-function checkout() {
-  if (cart.length === 0) {
-    alert("Your cart is empty!");
-    return;
-  }
-  let total = cart.reduce((sum, c) => sum + c.price, 0);
-  const receipt = `
-    <div class="receipt">
-      <p><strong>EcoFix Order Receipt</strong></p>
-      <p>Items: ${cart.map(c => c.item).join(", ")}</p>
-      <p>Total: ₱${total}</p>
-      <p>Status: Confirmed ✅</p>
-      <p>Date: ${new Date().toLocaleString()}</p>
-    </div>`;
-  document.getElementById("receipt").innerHTML = receipt;
-  cart = [];
-  renderCart();
-}
+/* AI Chat */
+const chatFab=document.getElementById('chatFab'),chatPanel=document.getElementById('chatPanel'),chatSend=document.getElementById('chatSend'),chatInput=document.getElementById('chatInput'),chatBody=document.getElementById('chatBody');
+chatFab.onclick=()=>chatPanel.style.display='flex';
+document.getElementById('closeChat').onclick=()=>chatPanel.style.display='none';
 
-// Refund popup
-function refundOrder() {
-  const refundId = "RF-" + Math.floor(Math.random() * 100000);
-  const popup = document.createElement("div");
-  popup.style.position = "fixed";
-  popup.style.top = "0";
-  popup.style.left = "0";
-  popup.style.width = "100%";
-  popup.style.height = "100%";
-  popup.style.background = "rgba(0,0,0,0.5)";
-  popup.style.display = "flex";
-  popup.style.alignItems = "center";
-  popup.style.justifyContent = "center";
-  popup.innerHTML = `
-    <div style="background:white;padding:1.5rem;border-radius:12px;max-width:350px;text-align:center;">
-      <h3>Refund Confirmation</h3>
-      <p>Your refund request has been submitted successfully 💚</p>
-      <p>Reference ID: <strong>${refundId}</strong></p>
-      <button onclick="this.parentElement.parentElement.remove()" style="margin-top:10px;background:var(--green);color:white;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;">OK</button>
-    </div>`;
-  document.body.appendChild(popup);
-}
-
-// --- AI Chat Section ---
-const chatBox = document.getElementById("chatBox");
-const chatInput = document.getElementById("chatInput");
-
-function appendChat(sender, text) {
-  const p = document.createElement("p");
-  p.innerHTML = `<strong>${sender === "user" ? "You" : "EcoFix Assistant"}:</strong> ${text}`;
-  chatBox.appendChild(p);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-function aiResponse(msg) {
-  msg = msg.toLowerCase();
-  if (msg.includes("price")) return "Our materials range from ₱180–₱350. You can see details in the Shop page.";
-  if (msg.includes("refund")) return "You can request a refund from the Orders section below your receipt.";
-  if (msg.includes("order")) return "Once you confirm your order, your receipt will appear instantly on this page.";
-  if (msg.includes("hello") || msg.includes("hi")) return "Hello! How can I help you today?";
-  return "I'm here to assist with your eco-friendly repair needs!";
-}
-
-function sendChat() {
-  const userMsg = chatInput.value.trim();
-  if (!userMsg) return;
-  appendChat("user", userMsg);
-  chatInput.value = "";
-
-  // Remove old typing indicator
-  const oldDots = document.getElementById("typingDots");
-  if (oldDots) oldDots.remove();
-
-  // Add typing animation
-  const dots = document.createElement("div");
-  dots.id = "typingDots";
-  dots.innerHTML = "<span class='typing-dot'></span><span class='typing-dot'></span><span class='typing-dot'></span>";
-  chatBox.appendChild(dots);
-  chatBox.scrollTop = chatBox.scrollHeight;
-
-  setTimeout(() => {
-    dots.remove();
-    const reply = aiResponse(userMsg);
-    appendChat("ai", reply);
-  }, 800);
+chatSend.onclick=()=>{const t=chatInput.value.trim();if(!t)return;addUserMessage(t);chatInput.value='';setTimeout(()=>smartReply(t),500);};
+function addUserMessage(t){chatBody.innerHTML+=`<div class='bubble user'>${t}</div>`;chatBody.scrollTop=chatBody.scrollHeight;}
+function addAIMessage(t){chatPanel.style.display='flex';chatBody.innerHTML+=`<div class='bubble ai'>${t}</div>`;chatBody.scrollTop=chatBody.scrollHeight;}
+function smartReply(msg){
+  msg=msg.toLowerCase();
+  let reply="I'm EcoAssist! How can I help with your EcoFix order?";
+  if(msg.includes("price")||msg.includes("cost"))reply="Our bamboo reinforcement is ₱250, coconut fiber board ₱300, fly ash concrete ₱220, and recycled aggregates ₱180.";
+  else if(msg.includes("refund"))reply="You can request a refund right after checkout under your receipt. We'll confirm it within 24 hours.";
+  else if(msg.includes("delivery"))reply="Orders are usually delivered within 3–5 business days, depending on your address.";
+  else if(msg.includes("hello")||msg.includes("hi"))reply="Hi there 👋 I'm EcoAssist, your green materials assistant! Ask me anything about our products or your orders.";
+  else if(msg.includes("payment"))reply="We accept GCash, bank transfer, and Cash on Delivery (COD).";
+  addAIMessage(reply);
 }
 </script>
-
 </body>
 </html>
