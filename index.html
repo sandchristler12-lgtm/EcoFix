@@ -5,46 +5,55 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>EcoFix – Sustainable Repair Solutions</title>
 <style>
-  :root{--green:#2e7d32;--accent:#43a047;--bg:#f0f8f5;}
-  body{font-family:"Poppins",sans-serif;margin:0;background:var(--bg);color:#222;}
+  :root{--green:#2e7d32;--green-dark:#236127;--accent:#43a047;--bg:#f0f8f5;--muted:#666;}
+  body{font-family:"Poppins",Arial,sans-serif;margin:0;background:var(--bg);color:#222;}
   header{display:flex;align-items:center;gap:15px;justify-content:center;background:var(--green);color:#fff;padding:18px;}
   header img{width:60px;height:60px;border-radius:10px;object-fit:cover}
   header h1{margin:0;font-size:1.25rem;}
   .container{max-width:1000px;margin:22px auto;padding:0 18px;}
   .overview{background:#e8f5e9;padding:18px;border-radius:12px;margin-bottom:20px;}
-  h2{color:var(--green)}
+  h2{color:var(--green);margin-top:0}
   .products{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;}
   .product{background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06);text-align:center;transition:transform .18s ease,box-shadow .18s;}
   .product:hover{transform:translateY(-6px);box-shadow:0 14px 30px rgba(0,0,0,0.08);}
   .product img{width:100%;height:170px;object-fit:cover;border-radius:10px}
-  .product h3{margin:10px 0 6px;color:#2e7d32}
-  .product p{margin:0 0 10px;color:#555;font-size:.95rem}
+  .product h3{margin:10px 0 6px;color:var(--green-dark)}
+  .product p{margin:0 0 10px;color:var(--muted);font-size:.95rem}
   .product .price{font-weight:700;color:#111;margin-bottom:8px}
   .btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:999px;cursor:pointer;font-weight:600;transition:transform .12s,background .12s}
-  .btn:hover{transform:scale(1.03);background:#236127}
+  .btn:hover{transform:scale(1.03);background:var(--green-dark)}
   .cart{background:#f6fff6;padding:14px;border-radius:12px;margin-top:20px}
-  #cartList{list-style:none;padding:0;margin:0}
-  #cartList li{padding:8px 0;border-bottom:1px dashed #ddd;display:flex;justify-content:space-between;align-items:center}
+  #cartList{list-style:none;padding-left:0;margin:0}
+  #cartList li{padding:8px 0;border-bottom:1px dashed #e1e1e1;display:flex;justify-content:space-between;align-items:center}
   #cartList li:last-child{border-bottom:none}
+  .small{font-size:.9rem;color:var(--muted)}
   .checkout{background:#eaf7ea;padding:16px;border-radius:12px;margin-top:18px}
   .checkout input,.checkout select{width:100%;padding:10px;border-radius:10px;border:1px solid #d9d9d9;margin-top:8px}
   .contact{background:#e8f5e9;padding:16px;border-radius:12px;margin-top:18px}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  table th,table td{border:1px solid #e1e1e1;padding:8px;text-align:left;font-size:14px}
+  .progress-wrap{background:#eee;border-radius:8px;height:12px;overflow:hidden;width:120px}
+  .progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#4caf50,#8bc34a)}
+  .status-tag{padding:6px 8px;border-radius:6px;font-weight:600}
+  .status-pending{background:#fff4e5;color:#8a5300}
+  .status-processing{background:#fff9e6;color:#7a5b00}
+  .status-out{background:#e6f7ff;color:#025f8a}
+  .status-delivered{background:#e8f5e9;color:#155724}
+  .status-cancelled{background:#fdecea;color:#8a1f1f}
   .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9999}
-  .receipt{width:360px;background:#fff;border-radius:12px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);}
-  .refund-form{display:none;margin-top:10px;padding:10px;background:#fff8e1;border-radius:8px}
-  .refund-form input,.refund-form select,.refund-form textarea{width:100%;padding:8px;margin-top:5px;border-radius:8px;border:1px solid #ddd}
+  .receipt{width:360px;background:#fff;border-radius:12px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);font-size:14px}
+  .refund{background:#f0fff0;padding:16px;border-radius:12px;margin-top:18px}
+  .refund input,.refund textarea,.refund select{width:100%;padding:10px;border-radius:10px;border:1px solid #d9d9d9;margin-top:8px}
   .refund-confirm{background:#dff0d8;color:#2e7d32;padding:8px;border-radius:8px;margin-top:10px;display:none}
-  table{width:100%;border-collapse:collapse;margin-top:10px;}
-  table,th,td{border:1px solid #ccc;}
-  th,td{padding:8px;text-align:left;}
   .chat-fab{position:fixed;right:22px;bottom:22px;width:64px;height:64px;border-radius:18px;background:linear-gradient(180deg,var(--accent),#06b6d4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;cursor:pointer;box-shadow:0 12px 30px rgba(2,6,23,0.4);z-index:999}
-  .chat-panel{position:fixed;right:22px;bottom:100px;width:340px;max-height:68vh;background:#fff;border-radius:14px;box-shadow:0 12px 36px rgba(2,6,23,0.35);display:none;flex-direction:column;overflow:hidden;z-index:999}
+  .chat-panel{position:fixed;right:22px;bottom:100px;width:340px;max-height:68vh;background:var(--card);border-radius:14px;box-shadow:0 12px 36px rgba(2,6,23,0.35);display:none;flex-direction:column;overflow:hidden;z-index:999}
   .chat-header{padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,#f6fff6,#ffffff)}
   .chat-body{padding:12px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px;background:#fbfffb}
   .chat-input{display:flex;border-top:1px solid #eee;padding:8px;gap:8px}
   .bubble{display:inline-block;padding:8px 12px;border-radius:12px;max-width:84%}
   .bubble.user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
   .bubble.ai{background:#f1f1f1;color:#111;align-self:flex-start;border-bottom-left-radius:4px}
+  @media (max-width:600px){ .chat-panel{right:12px;left:12px;width:auto} .receipt{width:92vw} }
 </style>
 </head>
 <body>
@@ -61,226 +70,496 @@
   </div>
 
   <h2>Products</h2>
-  <div class="products">
+  <div class="products" id="products">
     <div class="product" data-name="Bamboo Reinforcement" data-price="250">
-      <img src="bamboo.jpg" onerror="this.src='https://via.placeholder.com/400x300?text=Bamboo'">
+      <img src="bamboo.jpg" alt="Bamboo Reinforcement" onerror="this.src='https://via.placeholder.com/400x300?text=Bamboo'">
       <h3>Bamboo Reinforcement</h3>
-      <p>Strong, renewable reinforcement for repairs.</p>
-      <div class="price">₱250</div><button class="btn add-to-cart">Add to Cart</button>
+      <p class="small">Strong, renewable, ideal for lightweight structural repairs.</p>
+      <div class="price">₱250</div>
+      <button class="btn add-to-cart">Add to Cart</button>
     </div>
+
     <div class="product" data-name="Coconut Fiber Board" data-price="300">
-      <img src="coco.jpg" onerror="this.src='https://via.placeholder.com/400x300?text=Coconut'">
+      <img src="coco.jpg" alt="Coconut Fiber Board" onerror="this.src='https://via.placeholder.com/400x300?text=Coconut+Fiber'">
       <h3>Coconut Fiber Board</h3>
-      <p>Durable and sustainable insulation board.</p>
-      <div class="price">₱300</div><button class="btn add-to-cart">Add to Cart</button>
+      <p class="small">Insulation and finishing boards from coconut husk fiber.</p>
+      <div class="price">₱300</div>
+      <button class="btn add-to-cart">Add to Cart</button>
     </div>
+
     <div class="product" data-name="Fly Ash Concrete" data-price="220">
-      <img src="flyash.jpg" onerror="this.src='https://via.placeholder.com/400x300?text=Fly+Ash'">
+      <img src="flyash.jpg" alt="Fly Ash Concrete" onerror="this.src='https://via.placeholder.com/400x300?text=Fly+Ash'">
       <h3>Fly Ash Concrete</h3>
-      <p>Eco-friendly high-performance concrete mix.</p>
-      <div class="price">₱220</div><button class="btn add-to-cart">Add to Cart</button>
+      <p class="small">Low-carbon concrete using industrial by-products for strength.</p>
+      <div class="price">₱220</div>
+      <button class="btn add-to-cart">Add to Cart</button>
     </div>
+
     <div class="product" data-name="Recycled Aggregates" data-price="180">
-      <img src="aggregate.jpg" onerror="this.src='https://via.placeholder.com/400x300?text=Aggregate'">
+      <img src="aggregate.jpg" alt="Recycled Aggregates" onerror="this.src='https://via.placeholder.com/400x300?text=Aggregates'">
       <h3>Recycled Aggregates</h3>
-      <p>Processed from construction debris for reuse.</p>
-      <div class="price">₱180</div><button class="btn add-to-cart">Add to Cart</button>
+      <p class="small">Processed construction debris reused for new builds.</p>
+      <div class="price">₱180</div>
+      <button class="btn add-to-cart">Add to Cart</button>
     </div>
   </div>
 
   <div class="cart">
-    <h2>Cart</h2><ul id="cartList"></ul><h3 id="cartTotal">Total: ₱0</h3>
+    <h2>Cart</h2>
+    <ul id="cartList"></ul>
+    <div class="small">Tip: You can change quantity in the cart before checkout.</div>
+    <h3 id="cartTotal">Total: ₱0</h3>
   </div>
 
   <div class="checkout">
     <h2>Checkout</h2>
-    <input id="custName" placeholder="Full name">
-    <input id="custAddress" placeholder="Address">
+    <label>Full name</label>
+    <input id="custName" type="text" placeholder="Your full name">
+    <label>Delivery address</label>
+    <input id="custAddress" type="text" placeholder="Complete address">
+    <label>Mode of payment</label>
     <select id="custPayment">
-      <option value="">Mode of Payment</option>
-      <option>Gcash</option><option>Bank</option><option>COD</option>
+      <option value="">Select payment</option>
+      <option value="Gcash">GCash</option>
+      <option value="Bank">Bank Transfer</option>
+      <option value="COD">Cash on Delivery (COD)</option>
     </select>
     <div id="paymentDetails"></div>
-    <button id="placeOrderBtn" class="btn">Place Order</button>
+    <div style="margin-top:12px;">
+      <button id="placeOrderBtn" class="btn">Place Order</button>
+    </div>
 
     <h2>Order History & Tracking</h2>
     <table id="orderHistory">
       <thead>
-        <tr><th>Order ID</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Action</th></tr>
+        <tr>
+          <th>Order ID</th>
+          <th>Items</th>
+          <th>Total</th>
+          <th>Payment</th>
+          <th>Status</th>
+          <th>Progress</th>
+          <th>Action</th>
+        </tr>
       </thead>
       <tbody></tbody>
     </table>
   </div>
 
+  <div class="refund">
+    <h2>Refund Request</h2>
+    <label>Order ID</label>
+    <input id="refundOrderId" type="text" placeholder="Enter your Order ID">
+    <label>Reason for Refund</label>
+    <textarea id="refundReason" rows="3" placeholder="Describe the issue or reason"></textarea>
+    <label>Refund Method</label>
+    <select id="refundMethod">
+      <option value="">Select method</option>
+      <option>GCash</option>
+      <option>Bank</option>
+      <option>Store Credit</option>
+    </select>
+    <div style="margin-top:12px;">
+      <button id="refundBtn" class="btn">Submit Refund</button>
+    </div>
+    <div class="refund-confirm" id="refundConfirm">✅ Refund request submitted! We'll contact you shortly.</div>
+  </div>
+
   <div class="contact">
-    <h2>Contact Us</h2>
-    <p>Email: support@ecofix.com | Phone: +63 912 345 6789</p>
+    <h2>Contact</h2>
+    <p class="small">Email: support@ecofix.com • Phone: +63 912 345 6789</p>
   </div>
 </div>
 
 <!-- Receipt Modal -->
-<div class="modal-backdrop" id="receiptModal">
-  <div class="receipt">
+<div class="modal-backdrop" id="receiptModal" role="dialog" aria-hidden="true">
+  <div class="receipt" id="receiptContent">
     <h3>EcoFix Receipt</h3>
-    <div id="receiptInfo"></div>
-    <div id="cancelNotice" style="display:none;color:red;font-weight:bold;margin-top:10px;">❌ Order Cancelled</div>
-    <button id="cancelOrderBtn" class="btn" style="background:#f44336;margin-top:10px;display:none;">Cancel Order</button>
-    <button id="refundBtn" class="btn" style="background:#f57c00;margin-top:10px;">Request Refund</button>
-    <div class="refund-form" id="refundForm">
-      <input id="refundOrderId" readonly>
-      <textarea id="refundReason" placeholder="Reason for refund..."></textarea>
-      <select id="refundMode">
-        <option value="">Refund Mode</option>
-        <option>GCash</option><option>Bank</option><option>Store Credit</option>
-      </select>
-      <button id="submitRefund" class="btn" style="margin-top:8px;">Submit Refund</button>
-      <div class="refund-confirm" id="refundConfirm">✅ Refund request submitted!</div>
+    <div class="meta" id="receiptMeta"></div>
+    <div><strong>Customer</strong><div id="rName" class="small"></div></div>
+    <div style="margin-top:8px"><strong>Address</strong><div id="rAddress" class="small"></div></div>
+    <table id="receiptItems" aria-hidden="false"></table>
+    <div class="total" id="receiptTotal"></div>
+    <div class="actions">
+      <button class="print-btn" onclick="printReceipt()">Print</button>
+      <button class="close-btn" onclick="closeReceipt()">Close</button>
     </div>
-    <button onclick="closeReceipt()" class="btn" style="margin-top:10px;background:#ccc;color:#111;">Close</button>
   </div>
 </div>
 
-<!-- Chat Assistant -->
-<div class="chat-fab" id="chatFab">💬</div>
-<div class="chat-panel" id="chatPanel">
-  <div class="chat-header"><b>EcoAssist</b><button id="closeChat" class="btn" style="background:#eee;color:#111;padding:5px 8px;border-radius:8px;">Close</button></div>
+<!-- Chat Floating Button + Panel -->
+<div class="chat-fab" id="chatFab" title="Chat with EcoAssist">💬</div>
+<div class="chat-panel" id="chatPanel" aria-hidden="true">
+  <div class="chat-header">
+    <div><strong>EcoAssist</strong><div class="small">Offline assistant</div></div>
+    <div><button class="btn" id="closeChat" style="padding:6px 10px;border-radius:8px;background:#eee;color:#111">Close</button></div>
+  </div>
   <div class="chat-body" id="chatBody"></div>
   <div class="chat-input">
-    <input id="chatInput" placeholder="Ask EcoAssist..." style="flex:1;padding:10px;border:none;outline:none">
+    <input id="chatInput" type="text" placeholder="Ask about products, your order, or refunds..." style="flex:1;padding:10px;border:none;outline:none">
     <button id="chatSend" class="btn">Send</button>
   </div>
 </div>
 
 <script>
-let cart=[],orders=[];
-const cartList=document.getElementById('cartList'),cartTotal=document.getElementById('cartTotal');
-const orderTable=document.querySelector("#orderHistory tbody");
+/* ---------- Data & runtime control ---------- */
+const cart = []; // {name, price, qty}
+const orders = []; // {id, items:[], total, payment, status, progress, trackingIntervalId}
 
-function renderCart(){
-  cartList.innerHTML='';
-  let total=0;
-  cart.forEach((c,i)=>{
-    total+=c.price*c.qty;
-    cartList.innerHTML+=`<li>${c.name} x${c.qty} ₱${c.price*c.qty} <button onclick='cart.splice(${i},1);renderCart()'>🗑️</button></li>`;
-  });
-  cartTotal.textContent='Total: ₱'+total;
+/* ---------- Cart logic ---------- */
+const cartList = document.getElementById('cartList');
+const cartTotalEl = document.getElementById('cartTotal');
+
+function addToCartFromBtn(btn){
+  const card = btn.closest('.product');
+  const name = card.dataset.name || card.querySelector('h3').innerText;
+  const price = Number(card.dataset.price || card.querySelector('.price')?.innerText.replace(/[^0-9.-]+/g,"") || 0);
+  addToCart(name, price);
 }
 
-document.querySelectorAll('.add-to-cart').forEach(btn=>btn.onclick=()=>{
-  const p=btn.parentElement;
-  const name=p.dataset.name;
-  const price=+p.dataset.price;
-  const item=cart.find(x=>x.name==name);
-  item?item.qty++:cart.push({name,price,qty:1});
+function addToCart(name, price){
+  const existing = cart.find(i => i.name === name);
+  if(existing) existing.qty++;
+  else cart.push({name, price, qty:1});
   renderCart();
-});
+}
 
-const receiptModal=document.getElementById('receiptModal'),receiptInfo=document.getElementById('receiptInfo');
-const cancelOrderBtn=document.getElementById('cancelOrderBtn'),cancelNotice=document.getElementById('cancelNotice');
-const refundBtn=document.getElementById('refundBtn'),refundForm=document.getElementById('refundForm'),refundConfirm=document.getElementById('refundConfirm');
+function renderCart(){
+  cartList.innerHTML = '';
+  let total = 0;
+  cart.forEach((it, idx) => {
+    total += it.price * it.qty;
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <div style="flex:1">
+        <strong>${it.name}</strong><div class="small">₱${it.price} x ${it.qty}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="changeQty(${idx},-1)" style="padding:6px;border-radius:8px;border:1px solid #ddd;background:#fff">-</button>
+        <button onclick="changeQty(${idx},1)" style="padding:6px;border-radius:8px;border:1px solid #ddd;background:#fff">+</button>
+        <button onclick="removeItem(${idx})" style="padding:6px;border-radius:8px;border:1px solid #eee;background:#fff">Remove</button>
+      </div>`;
+    li.style.display='flex'; li.style.justifyContent='space-between'; li.style.alignItems='center';
+    cartList.appendChild(li);
+  });
+  cartTotalEl.innerText = `Total: ₱${total}`;
+}
+function changeQty(i, delta){ cart[i].qty = Math.max(1, cart[i].qty + delta); renderCart(); }
+function removeItem(i){ cart.splice(i,1); renderCart(); }
+document.querySelectorAll('.add-to-cart').forEach(btn => btn.addEventListener('click', (e)=>{ addToCartFromBtn(e.target); }));
 
-document.getElementById('placeOrderBtn').onclick=()=>{
-  const n=document.getElementById('custName').value.trim(),a=document.getElementById('custAddress').value.trim(),p=document.getElementById('custPayment').value;
-  if(!n||!a||!p||cart.length==0){alert('Complete checkout details');return;}
-  const id='ECO'+Date.now().toString().slice(-5);
-  receiptModal.style.display='flex';
-  receiptInfo.innerHTML=`<p><b>Order ID:</b> ${id}</p><p><b>Name:</b> ${n}</p><p><b>Address:</b> ${a}</p><p><b>Payment:</b> ${p}</p>`;
-  document.getElementById('refundOrderId').value=id;
-  cancelNotice.style.display='none';
-  cancelOrderBtn.style.display=(p==='Bank'||p==='Gcash')?'inline-block':'none';
+/* ---------- Orders / Receipt ---------- */
+const receiptModal = document.getElementById('receiptModal');
+const receiptMeta = document.getElementById('receiptMeta');
+const rName = document.getElementById('rName');
+const rAddress = document.getElementById('rAddress');
+const receiptItems = document.getElementById('receiptItems');
+const receiptTotal = document.getElementById('receiptTotal');
+const orderHistoryBody = document.querySelector('#orderHistory tbody');
 
-  // Add to order history
-  const orderTotal=cart.reduce((sum,i)=>sum+i.price*i.qty,0);
-  orders.push({id,items:[...cart],total:orderTotal,payment:p,status:(p==='COD'?'Pending':'Paid')});
+function generateOrderId(){
+  return 'ECO' + Date.now().toString(36).toUpperCase().slice(-8);
+}
+
+function placeOrder(){
+  const name = document.getElementById('custName').value.trim();
+  const address = document.getElementById('custAddress').value.trim();
+  const payment = document.getElementById('custPayment').value;
+  if(!name || !address || !payment){ alert('Please complete name, address, and payment method.'); return; }
+  if(cart.length === 0){ alert('Your cart is empty.'); return; }
+
+  const id = generateOrderId();
+  const date = new Date().toLocaleString();
+
+  const itemsCopy = cart.map(i => ({...i}));
+  const total = itemsCopy.reduce((s,it)=>s + it.price * it.qty, 0);
+  const status = (payment === 'COD') ? 'Pending' : 'Processing';
+  const order = { id, items: itemsCopy, total, payment, status, progress: (status==='Processing'?5:0), trackingIntervalId: null };
+  orders.unshift(order); // newest first
   renderOrders();
 
-  cart=[];renderCart();
-};
+  // show receipt modal
+  receiptMeta.innerText = `Order #${id} · ${date} · ${payment}`;
+  rName.innerText = name;
+  rAddress.innerText = address;
+  receiptItems.innerHTML = '';
+  itemsCopy.forEach(it => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td style="text-align:left">${it.name} x ${it.qty}</td><td style="text-align:right">₱${it.price * it.qty}</td>`;
+    receiptItems.appendChild(row);
+  });
+  const tax = 0;
+  const grand = total + tax;
+  receiptTotal.innerHTML = `<div class="small">Subtotal: ₱${total}</div><div class="small">Tax: ₱${tax}</div><div class="total">Total: ₱${grand}</div>`;
+  receiptModal.style.display = 'flex';
 
-cancelOrderBtn.onclick=()=>{
-  if(confirm('Cancel this confirmed order?')){
-    cancelNotice.style.display='block';
-    cancelOrderBtn.disabled=true;
-    addAIMessage("EcoAssist: Your order has been successfully cancelled.");
-  }
-};
+  // clear cart and inputs
+  cart.length = 0;
+  renderCart();
+  document.getElementById('custName').value = '';
+  document.getElementById('custAddress').value = '';
+  document.getElementById('custPayment').value = '';
+  document.getElementById('paymentDetails').innerHTML = '';
+}
+document.getElementById('placeOrderBtn').addEventListener('click', placeOrder);
+
+function closeReceipt(){ receiptModal.style.display = 'none'; }
+function printReceipt(){
+  const content = document.getElementById('receiptContent').innerHTML;
+  const w = window.open('','_blank','width=600,height=700');
+  w.document.write(`<html><head><title>Receipt</title></head><body>${content}</body></html>`);
+  w.document.close(); w.focus();
+  setTimeout(()=> w.print(), 300);
+}
+
+/* ---------- Render Orders ---------- */
+function statusTagHTML(status){
+  if(status==='Pending') return `<span class="status-tag status-pending">Pending</span>`;
+  if(status==='Processing') return `<span class="status-tag status-processing">Processing</span>`;
+  if(status==='Out for Delivery') return `<span class="status-tag status-out">Out for Delivery</span>`;
+  if(status==='Delivered') return `<span class="status-tag status-delivered">Delivered</span>`;
+  if(status==='Cancelled') return `<span class="status-tag status-cancelled">Cancelled</span>`;
+  return `<span class="status-tag">${status}</span>`;
+}
 
 function renderOrders(){
-  orderTable.innerHTML='';
-  orders.forEach((o,i)=>{
-    const items=o.items.map(x=>`${x.name} x${x.qty}`).join(', ');
-    const action=(o.status==='Pending')?`<button onclick='markPaid(${i})' class='btn' style='background:#43a047'>Mark Paid</button>`:'';
-    orderTable.innerHTML+=`<tr>
+  orderHistoryBody.innerHTML = '';
+  orders.forEach((o, idx) => {
+    const items = o.items.map(it => `${it.name} x${it.qty}`).join(', ');
+    const progId = `prog-${o.id}`;
+    // actions: Mark Paid (only if Pending), Track (if not Cancelled/Delivered), Cancel (only if not Cancelled/Delivered)
+    const actions = [];
+    if(o.status === 'Pending') actions.push(`<button class="btn" onclick="markPaid(${idx})" style="padding:6px 8px;">Mark Paid</button>`);
+    if(o.status !== 'Cancelled' && o.status !== 'Delivered') actions.push(`<button class="btn" onclick="startTracking(${idx})" style="padding:6px 8px;background:#1976d2">Track Delivery</button>`);
+    // Cancel button only in order history section (as requested) and only when allowed
+    if(o.status !== 'Cancelled' && o.status !== 'Delivered') actions.push(`<button class="btn" onclick="cancelOrder(${idx})" style="padding:6px 8px;background:#f44336">Cancel</button>`);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
       <td>${o.id}</td>
       <td>${items}</td>
       <td>₱${o.total}</td>
       <td>${o.payment}</td>
-      <td>${o.status}</td>
-      <td>${action}</td>
-    </tr>`;
+      <td>${statusTagHTML(o.status)}</td>
+      <td>
+        <div class="progress-wrap" title="${o.progress}%">
+          <div id="${progId}" class="progress-bar" style="width:${o.progress}%"></div>
+        </div>
+      </td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">${actions.join('')}</td>
+    `;
+    orderHistoryBody.appendChild(tr);
   });
 }
 
-function markPaid(i){
-  orders[i].status='Paid';
+/* ---------- Mark Paid ---------- */
+function markPaid(index){
+  const o = orders[index];
+  if(!o) return;
+  if(o.status === 'Cancelled' || o.status === 'Delivered'){ alert('Cannot mark this order as paid.'); return; }
+  o.status = 'Processing';
+  if(!o.progress) o.progress = 5;
   renderOrders();
-  addAIMessage(`EcoAssist: Order ${orders[i].id} is now marked as Paid.`);
+  addAIMessage(`EcoAssist: Order ${o.id} marked as Paid and is now Processing.`);
 }
 
-function closeReceipt(){receiptModal.style.display='none';}
+/* ---------- Cancel Order (in Order History only) ---------- */
+function cancelOrder(index){
+  const o = orders[index];
+  if(!o) return;
+  if(o.status === 'Cancelled'){ alert('Order already cancelled.'); return; }
+  if(o.status === 'Delivered'){ alert('Delivered orders cannot be cancelled.'); return; }
+  if(!confirm(`Cancel order ${o.id}? This will stop tracking and cannot be undone.`)) return;
 
-// Refund logic
-refundBtn.onclick=()=>refundForm.style.display=refundForm.style.display==='block'?'none':'block';
-document.getElementById('submitRefund').onclick=()=>{
-  const reason=document.getElementById('refundReason').value.trim(),mode=document.getElementById('refundMode').value;
-  if(!reason||!mode){alert('Please fill out refund details');return;}
-  refundConfirm.style.display='block';
-  addAIMessage("EcoAssist: Your refund request has been received and is being processed. We'll contact you soon!");
-  refundForm.querySelectorAll('input,textarea,select,button').forEach(e=>e.disabled=true);
-};
-
-// Payment options
-const custPayment=document.getElementById('custPayment');
-const paymentDetails=document.getElementById('paymentDetails');
-custPayment.onchange=()=>{
-  const choice=custPayment.value;
-  paymentDetails.innerHTML='';
-  if(choice==='Gcash'){
-    paymentDetails.innerHTML=`<label><b>Enter GCash Number:</b></label>
-    <input id="gcashNumber" placeholder="Enter your GCash number">`;
+  // stop any tracking interval if running
+  if(o.trackingIntervalId){
+    clearInterval(o.trackingIntervalId);
+    o.trackingIntervalId = null;
   }
-  else if(choice==='Bank'){
-    paymentDetails.innerHTML=`
-      <label><b>Select Bank:</b></label>
-      <select id="bankName" style="width:100%;padding:10px;border-radius:10px;border:1px solid #d9d9d9;margin-top:8px">
-        <option value="">-- Choose Bank --</option>
-        <option value="BDO">BDO</option>
-        <option value="BPI">BPI</option>
-        <option value="Metrobank">Metrobank</option>
-      </select>
-      <label style="margin-top:10px;display:block;"><b>Enter Account Number:</b></label>
-      <input id="bankAccountNumber" placeholder="Enter your account number" style="width:100%;padding:10px;border-radius:10px;border:1px solid #d9d9d9;margin-top:8px">
-    `;
-  }
-};
-
-// AI Chat
-const chatFab=document.getElementById('chatFab'),chatPanel=document.getElementById('chatPanel'),chatSend=document.getElementById('chatSend'),chatInput=document.getElementById('chatInput'),chatBody=document.getElementById('chatBody');
-chatFab.onclick=()=>chatPanel.style.display='flex';
-document.getElementById('closeChat').onclick=()=>chatPanel.style.display='none';
-chatSend.onclick=()=>{const t=chatInput.value.trim();if(!t)return;addUserMessage(t);chatInput.value='';setTimeout(()=>smartReply(t),500);};
-function addUserMessage(t){chatBody.innerHTML+=`<div class='bubble user'>${t}</div>`;chatBody.scrollTop=chatBody.scrollHeight;}
-function addAIMessage(t){chatPanel.style.display='flex';chatBody.innerHTML+=`<div class='bubble ai'>${t}</div>`;chatBody.scrollTop=chatBody.scrollHeight;}
-function smartReply(msg){
-  msg=msg.toLowerCase();
-  let reply="I'm EcoAssist! How can I help with your EcoFix order?";
-  if(msg.includes("price")||msg.includes("cost"))reply="Our bamboo reinforcement is ₱250, coconut fiber board ₱300, fly ash concrete ₱220, and recycled aggregates ₱180.";
-  else if(msg.includes("refund"))reply="You can request a refund right after checkout under your receipt. We'll confirm it within 24 hours.";
-  else if(msg.includes("delivery"))reply="Orders are usually delivered within 3–5 business days.";
-  else if(msg.includes("hello")||msg.includes("hi"))reply="Hi there 👋 I'm EcoAssist, your green materials assistant!";
-  else if(msg.includes("payment"))reply="We accept GCash, Bank Transfer, and COD.";
-  addAIMessage(reply);
+  // set status and progress
+  o.status = 'Cancelled';
+  o.progress = 0;
+  renderOrders();
+  addAIMessage(`EcoAssist: Order ${o.id} has been cancelled successfully.`);
 }
+
+/* ---------- Open order details (receipt modal) ---------- */
+function openOrderDetails(index){
+  const o = orders[index];
+  if(!o) return;
+  receiptModal.style.display = 'flex';
+  receiptMeta.innerText = `Order #${o.id} · ${new Date().toLocaleString()}`;
+  rName.innerText = '(Order history)';
+  rAddress.innerText = '';
+  receiptItems.innerHTML = '';
+  o.items.forEach(it => {
+    const r = document.createElement('tr');
+    r.innerHTML = `<td>${it.name} x${it.qty}</td><td style="text-align:right">₱${it.price*it.qty}</td>`;
+    receiptItems.appendChild(r);
+  });
+  receiptTotal.innerText = 'Total: ₱' + o.total;
+  document.getElementById('refundOrderId').value = o.id;
+}
+
+/* ---------- Tracking simulation (update by user action) ---------- */
+function startTracking(index){
+  const o = orders[index];
+  if(!o) return;
+  if(o.status === 'Cancelled'){ alert('This order has been cancelled.'); return; }
+  if(o.status === 'Delivered'){ alert('Order already delivered.'); return; }
+
+  // If COD and still Pending -> request to mark paid
+  if(o.payment === 'COD' && o.status === 'Pending'){
+    if(!confirm('This is COD and still Pending. Mark as Paid now to start tracking?')) return;
+    o.status = 'Processing';
+    o.progress = 5;
+    renderOrders();
+    addAIMessage(`EcoAssist: Order ${o.id} was set to Processing to start tracking.`);
+  }
+
+  addAIMessage(`EcoAssist: Tracking started for order ${o.id}.`);
+
+  // If an interval already exists for this order, do nothing
+  if(o.trackingIntervalId) return;
+
+  const steps = [
+    { status: 'Processing', target: 30 },
+    { status: 'Out for Delivery', target: 80 },
+    { status: 'Delivered', target: 100 }
+  ];
+
+  let step = 0;
+  // Create an interval reference stored on the order so we can stop it on cancel
+  o.trackingIntervalId = setInterval(() => {
+    if(o.status === 'Cancelled'){
+      clearInterval(o.trackingIntervalId);
+      o.trackingIntervalId = null;
+      return;
+    }
+    const s = steps[step];
+    // animate progress to target gradually (inner small timer)
+    let current = o.progress || 0;
+    const progId = `prog-${o.id}`;
+    const inner = setInterval(() => {
+      if(o.status === 'Cancelled'){
+        clearInterval(inner);
+        clearInterval(o.trackingIntervalId);
+        o.trackingIntervalId = null;
+        renderOrders();
+        return;
+      }
+      if(current >= s.target){
+        clearInterval(inner);
+        o.status = s.status;
+        o.progress = s.target;
+        renderOrders();
+        addAIMessage(`EcoAssist: Order ${o.id} is now ${o.status}.`);
+        step++;
+        if(step >= steps.length){
+          clearInterval(o.trackingIntervalId);
+          o.trackingIntervalId = null;
+        }
+        return;
+      }
+      current += 4;
+      o.progress = Math.min(current, s.target);
+      // update progress bar quickly if present
+      const bar = document.getElementById(progId);
+      if(bar) bar.style.width = o.progress + '%';
+    }, 300);
+  }, 2000);
+}
+
+/* ---------- Refund handling ---------- */
+document.getElementById('refundBtn').addEventListener('click', () => {
+  const id = document.getElementById('refundOrderId').value.trim();
+  const reason = document.getElementById('refundReason').value.trim();
+  const method = document.getElementById('refundMethod').value;
+  if(!id || !reason || !method){ alert('Please provide Order ID, reason, and refund method.'); return; }
+  document.getElementById('refundConfirm').style.display = 'block';
+  addAIMessage(`EcoAssist: Refund request for ${id} received (method: ${method}). We'll process it within 3–5 business days.`);
+  // reset
+  document.getElementById('refundOrderId').value = '';
+  document.getElementById('refundReason').value = '';
+  document.getElementById('refundMethod').value = '';
+  setTimeout(()=>{ document.getElementById('refundConfirm').style.display = 'none'; }, 4000);
+});
+
+/* ---------- Payment detail fields ---------- */
+const custPayment = document.getElementById('custPayment');
+const paymentDetails = document.getElementById('paymentDetails');
+custPayment.addEventListener('change', () => {
+  const choice = custPayment.value;
+  paymentDetails.innerHTML = '';
+  if(choice === 'Gcash'){
+    paymentDetails.innerHTML = `<label class="small">GCash number</label><input id="gcashNumber" placeholder="09XXXXXXXXX">`;
+  } else if(choice === 'Bank'){
+    paymentDetails.innerHTML = `<label class="small">Bank</label>
+      <select id="bankName"><option value="">Select bank</option><option>BDO</option><option>BPI</option><option>Metrobank</option></select>
+      <label class="small" style="margin-top:8px;display:block">Account no.</label><input id="bankAccountNumber" placeholder="Account number">`;
+  }
+});
+
+/* ---------- Chat (fixed single reply) ---------- */
+const chatFab = document.getElementById('chatFab');
+const chatPanel = document.getElementById('chatPanel');
+const chatBody = document.getElementById('chatBody');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+
+chatFab.addEventListener('click', ()=>{ chatPanel.style.display = 'flex'; chatInput.focus(); });
+document.getElementById('closeChat').addEventListener('click', ()=>{ chatPanel.style.display = 'none'; });
+
+function appendChatBubble(role, text){
+  const d = document.createElement('div');
+  d.className = 'bubble ' + (role === 'user' ? 'user' : 'ai');
+  d.textContent = text;
+  chatBody.appendChild(d);
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+function aiReplyFor(text){
+  const t = text.toLowerCase();
+  if(t.includes('price')||t.includes('cost')) return 'Prices: Bamboo ₱250, Coconut Fiber Board ₱300, Fly Ash Concrete ₱220, Recycled Aggregates ₱180.';
+  if(t.includes('refund')) return 'Use the Refund section below Checkout or open your receipt and request a refund there.';
+  if(t.includes('track')||t.includes('status')) return 'Open Order History and click "Track Delivery" for live progress updates.';
+  if(t.includes('order')) return 'Place your order using Checkout — a receipt and order ID will appear after placing.';
+  if(t.includes('hello')||t.includes('hi')) return "Hi! I'm EcoAssist — how can I help with your order or product info?";
+  return 'I can help with product info, orders, payment, and refunds — try "price", "refund", or "track order".';
+}
+
+let chatLocked = false;
+chatSend.addEventListener('click', ()=> {
+  if(chatLocked) return;
+  const txt = chatInput.value.trim();
+  if(!txt) return;
+  appendChatBubble('user', txt);
+  chatInput.value = '';
+  chatLocked = true;
+  const typing = document.createElement('div');
+  typing.id = 'typingDots';
+  typing.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+  chatBody.appendChild(typing);
+  chatBody.scrollTop = chatBody.scrollHeight;
+  setTimeout(()=> {
+    const dots = document.getElementById('typingDots');
+    if(dots) dots.remove();
+    appendChatBubble('ai', aiReplyFor(txt));
+    chatLocked = false;
+  }, 700);
+});
+
+// initial assistant greeting
+setTimeout(()=> appendChatBubble('ai', "Hello! I'm EcoAssist — I can help with product info, cart help, and order tracking."), 600);
+
+/* Utility to push AI notifications */
+function addAIMessage(text){
+  chatPanel.style.display = 'flex';
+  appendChatBubble('ai', text);
+}
+
+/* ---------- Initialize ---------- */
+renderCart();
+renderOrders();
 </script>
 </body>
 </html>
