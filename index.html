@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,6 +98,7 @@
       <option value="">Mode of Payment</option>
       <option>Gcash</option><option>Bank</option><option>COD</option>
     </select>
+    <div id="paymentDetails"></div>
     <button id="placeOrderBtn" class="btn">Place Order</button>
   </div>
 
@@ -113,6 +113,8 @@
   <div class="receipt">
     <h3>EcoFix Receipt</h3>
     <div id="receiptInfo"></div>
+    <div id="cancelNotice" style="display:none;color:red;font-weight:bold;margin-top:10px;">❌ Order Cancelled</div>
+    <button id="cancelOrderBtn" class="btn" style="background:#f44336;margin-top:10px;display:none;">Cancel Order</button>
     <button id="refundBtn" class="btn" style="background:#f57c00;margin-top:10px;">Request Refund</button>
     <div class="refund-form" id="refundForm">
       <input id="refundOrderId" readonly>
@@ -146,6 +148,8 @@ function renderCart(){cartList.innerHTML='';let total=0;cart.forEach((c,i)=>{tot
 document.querySelectorAll('.add-to-cart').forEach(btn=>btn.onclick=()=>{const p=btn.parentElement;const name=p.dataset.name;const price=+p.dataset.price;const item=cart.find(x=>x.name==name);item?item.qty++:cart.push({name,price,qty:1});renderCart();});
 
 const receiptModal=document.getElementById('receiptModal'),receiptInfo=document.getElementById('receiptInfo');
+const cancelOrderBtn=document.getElementById('cancelOrderBtn'),cancelNotice=document.getElementById('cancelNotice');
+
 document.getElementById('placeOrderBtn').onclick=()=>{
   const n=document.getElementById('custName').value.trim(),a=document.getElementById('custAddress').value.trim(),p=document.getElementById('custPayment').value;
   if(!n||!a||!p||cart.length==0){alert('Complete checkout details');return;}
@@ -153,7 +157,17 @@ document.getElementById('placeOrderBtn').onclick=()=>{
   receiptModal.style.display='flex';
   receiptInfo.innerHTML=`<p><b>Order ID:</b> ${id}</p><p><b>Name:</b> ${n}</p><p><b>Address:</b> ${a}</p><p><b>Payment:</b> ${p}</p>`;
   document.getElementById('refundOrderId').value=id;
+  cancelNotice.style.display='none';
+  if(p==='Bank'||p==='Gcash')cancelOrderBtn.style.display='inline-block';else cancelOrderBtn.style.display='none';
   cart=[];renderCart();
+};
+
+cancelOrderBtn.onclick=()=>{
+  if(confirm('Cancel this confirmed order?')){
+    cancelNotice.style.display='block';
+    cancelOrderBtn.disabled=true;
+    addAIMessage("EcoAssist: Your order has been successfully cancelled. Thank you for letting us know!");
+  }
 };
 
 function closeReceipt(){receiptModal.style.display='none';}
@@ -169,11 +183,36 @@ document.getElementById('submitRefund').onclick=()=>{
   refundForm.querySelectorAll('input,textarea,select,button').forEach(e=>e.disabled=true);
 };
 
+/* Payment options */
+const custPayment=document.getElementById('custPayment');
+const paymentDetails=document.getElementById('paymentDetails');
+
+custPayment.onchange=()=>{
+  const choice=custPayment.value;
+  paymentDetails.innerHTML='';
+  if(choice==='Gcash'){
+    paymentDetails.innerHTML=`<label><b>Enter GCash Number:</b></label>
+    <input id="gcashNumber" placeholder="Enter your GCash number">`;
+  }
+  else if(choice==='Bank'){
+    paymentDetails.innerHTML=`
+      <label><b>Select Bank:</b></label>
+      <select id="bankName" style="width:100%;padding:10px;border-radius:10px;border:1px solid #d9d9d9;margin-top:8px">
+        <option value="">-- Choose Bank --</option>
+        <option value="BDO">BDO</option>
+        <option value="BPI">BPI</option>
+        <option value="Metrobank">Metrobank</option>
+      </select>
+      <label style="margin-top:10px;display:block;"><b>Enter Account Number:</b></label>
+      <input id="bankAccountNumber" placeholder="Enter your account number" style="width:100%;padding:10px;border-radius:10px;border:1px solid #d9d9d9;margin-top:8px">
+    `;
+  }
+};
+
 /* AI Chat */
 const chatFab=document.getElementById('chatFab'),chatPanel=document.getElementById('chatPanel'),chatSend=document.getElementById('chatSend'),chatInput=document.getElementById('chatInput'),chatBody=document.getElementById('chatBody');
 chatFab.onclick=()=>chatPanel.style.display='flex';
 document.getElementById('closeChat').onclick=()=>chatPanel.style.display='none';
-
 chatSend.onclick=()=>{const t=chatInput.value.trim();if(!t)return;addUserMessage(t);chatInput.value='';setTimeout(()=>smartReply(t),500);};
 function addUserMessage(t){chatBody.innerHTML+=`<div class='bubble user'>${t}</div>`;chatBody.scrollTop=chatBody.scrollHeight;}
 function addAIMessage(t){chatPanel.style.display='flex';chatBody.innerHTML+=`<div class='bubble ai'>${t}</div>`;chatBody.scrollTop=chatBody.scrollHeight;}
@@ -182,9 +221,9 @@ function smartReply(msg){
   let reply="I'm EcoAssist! How can I help with your EcoFix order?";
   if(msg.includes("price")||msg.includes("cost"))reply="Our bamboo reinforcement is ₱250, coconut fiber board ₱300, fly ash concrete ₱220, and recycled aggregates ₱180.";
   else if(msg.includes("refund"))reply="You can request a refund right after checkout under your receipt. We'll confirm it within 24 hours.";
-  else if(msg.includes("delivery"))reply="Orders are usually delivered within 3–5 business days, depending on your address.";
-  else if(msg.includes("hello")||msg.includes("hi"))reply="Hi there 👋 I'm EcoAssist, your green materials assistant! Ask me anything about our products or your orders.";
-  else if(msg.includes("payment"))reply="We accept GCash, bank transfer, and Cash on Delivery (COD).";
+  else if(msg.includes("delivery"))reply="Orders are usually delivered within 3–5 business days.";
+  else if(msg.includes("hello")||msg.includes("hi"))reply="Hi there 👋 I'm EcoAssist, your green materials assistant!";
+  else if(msg.includes("payment"))reply="We accept GCash, Bank Transfer, and COD.";
   addAIMessage(reply);
 }
 </script>
