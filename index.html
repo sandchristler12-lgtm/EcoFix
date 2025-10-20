@@ -34,7 +34,9 @@
   .refund-form{display:none;margin-top:10px;padding:10px;background:#fff8e1;border-radius:8px}
   .refund-form input,.refund-form select,.refund-form textarea{width:100%;padding:8px;margin-top:5px;border-radius:8px;border:1px solid #ddd}
   .refund-confirm{background:#dff0d8;color:#2e7d32;padding:8px;border-radius:8px;margin-top:10px;display:none}
-  /* Chat */
+  table{width:100%;border-collapse:collapse;margin-top:10px;}
+  table,th,td{border:1px solid #ccc;}
+  th,td{padding:8px;text-align:left;}
   .chat-fab{position:fixed;right:22px;bottom:22px;width:64px;height:64px;border-radius:18px;background:linear-gradient(180deg,var(--accent),#06b6d4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;cursor:pointer;box-shadow:0 12px 30px rgba(2,6,23,0.4);z-index:999}
   .chat-panel{position:fixed;right:22px;bottom:100px;width:340px;max-height:68vh;background:#fff;border-radius:14px;box-shadow:0 12px 36px rgba(2,6,23,0.35);display:none;flex-direction:column;overflow:hidden;z-index:999}
   .chat-header{padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,#f6fff6,#ffffff)}
@@ -100,6 +102,14 @@
     </select>
     <div id="paymentDetails"></div>
     <button id="placeOrderBtn" class="btn">Place Order</button>
+
+    <h2>Order History & Tracking</h2>
+    <table id="orderHistory">
+      <thead>
+        <tr><th>Order ID</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <div class="contact">
@@ -142,13 +152,32 @@
 </div>
 
 <script>
-let cart=[];
+let cart=[],orders=[];
 const cartList=document.getElementById('cartList'),cartTotal=document.getElementById('cartTotal');
-function renderCart(){cartList.innerHTML='';let total=0;cart.forEach((c,i)=>{total+=c.price*c.qty;cartList.innerHTML+=`<li>${c.name} x${c.qty} ₱${c.price*c.qty} <button onclick='cart.splice(${i},1);renderCart()'>🗑️</button></li>`});cartTotal.textContent='Total: ₱'+total;}
-document.querySelectorAll('.add-to-cart').forEach(btn=>btn.onclick=()=>{const p=btn.parentElement;const name=p.dataset.name;const price=+p.dataset.price;const item=cart.find(x=>x.name==name);item?item.qty++:cart.push({name,price,qty:1});renderCart();});
+const orderTable=document.querySelector("#orderHistory tbody");
+
+function renderCart(){
+  cartList.innerHTML='';
+  let total=0;
+  cart.forEach((c,i)=>{
+    total+=c.price*c.qty;
+    cartList.innerHTML+=`<li>${c.name} x${c.qty} ₱${c.price*c.qty} <button onclick='cart.splice(${i},1);renderCart()'>🗑️</button></li>`;
+  });
+  cartTotal.textContent='Total: ₱'+total;
+}
+
+document.querySelectorAll('.add-to-cart').forEach(btn=>btn.onclick=()=>{
+  const p=btn.parentElement;
+  const name=p.dataset.name;
+  const price=+p.dataset.price;
+  const item=cart.find(x=>x.name==name);
+  item?item.qty++:cart.push({name,price,qty:1});
+  renderCart();
+});
 
 const receiptModal=document.getElementById('receiptModal'),receiptInfo=document.getElementById('receiptInfo');
 const cancelOrderBtn=document.getElementById('cancelOrderBtn'),cancelNotice=document.getElementById('cancelNotice');
+const refundBtn=document.getElementById('refundBtn'),refundForm=document.getElementById('refundForm'),refundConfirm=document.getElementById('refundConfirm');
 
 document.getElementById('placeOrderBtn').onclick=()=>{
   const n=document.getElementById('custName').value.trim(),a=document.getElementById('custAddress').value.trim(),p=document.getElementById('custPayment').value;
@@ -158,7 +187,13 @@ document.getElementById('placeOrderBtn').onclick=()=>{
   receiptInfo.innerHTML=`<p><b>Order ID:</b> ${id}</p><p><b>Name:</b> ${n}</p><p><b>Address:</b> ${a}</p><p><b>Payment:</b> ${p}</p>`;
   document.getElementById('refundOrderId').value=id;
   cancelNotice.style.display='none';
-  if(p==='Bank'||p==='Gcash')cancelOrderBtn.style.display='inline-block';else cancelOrderBtn.style.display='none';
+  cancelOrderBtn.style.display=(p==='Bank'||p==='Gcash')?'inline-block':'none';
+
+  // Add to order history
+  const orderTotal=cart.reduce((sum,i)=>sum+i.price*i.qty,0);
+  orders.push({id,items:[...cart],total:orderTotal,payment:p,status:(p==='COD'?'Pending':'Paid')});
+  renderOrders();
+
   cart=[];renderCart();
 };
 
@@ -166,14 +201,35 @@ cancelOrderBtn.onclick=()=>{
   if(confirm('Cancel this confirmed order?')){
     cancelNotice.style.display='block';
     cancelOrderBtn.disabled=true;
-    addAIMessage("EcoAssist: Your order has been successfully cancelled. Thank you for letting us know!");
+    addAIMessage("EcoAssist: Your order has been successfully cancelled.");
   }
 };
 
+function renderOrders(){
+  orderTable.innerHTML='';
+  orders.forEach((o,i)=>{
+    const items=o.items.map(x=>`${x.name} x${x.qty}`).join(', ');
+    const action=(o.status==='Pending')?`<button onclick='markPaid(${i})' class='btn' style='background:#43a047'>Mark Paid</button>`:'';
+    orderTable.innerHTML+=`<tr>
+      <td>${o.id}</td>
+      <td>${items}</td>
+      <td>₱${o.total}</td>
+      <td>${o.payment}</td>
+      <td>${o.status}</td>
+      <td>${action}</td>
+    </tr>`;
+  });
+}
+
+function markPaid(i){
+  orders[i].status='Paid';
+  renderOrders();
+  addAIMessage(`EcoAssist: Order ${orders[i].id} is now marked as Paid.`);
+}
+
 function closeReceipt(){receiptModal.style.display='none';}
 
-/* Refund logic */
-const refundBtn=document.getElementById('refundBtn'),refundForm=document.getElementById('refundForm'),refundConfirm=document.getElementById('refundConfirm');
+// Refund logic
 refundBtn.onclick=()=>refundForm.style.display=refundForm.style.display==='block'?'none':'block';
 document.getElementById('submitRefund').onclick=()=>{
   const reason=document.getElementById('refundReason').value.trim(),mode=document.getElementById('refundMode').value;
@@ -183,10 +239,9 @@ document.getElementById('submitRefund').onclick=()=>{
   refundForm.querySelectorAll('input,textarea,select,button').forEach(e=>e.disabled=true);
 };
 
-/* Payment options */
+// Payment options
 const custPayment=document.getElementById('custPayment');
 const paymentDetails=document.getElementById('paymentDetails');
-
 custPayment.onchange=()=>{
   const choice=custPayment.value;
   paymentDetails.innerHTML='';
@@ -209,7 +264,7 @@ custPayment.onchange=()=>{
   }
 };
 
-/* AI Chat */
+// AI Chat
 const chatFab=document.getElementById('chatFab'),chatPanel=document.getElementById('chatPanel'),chatSend=document.getElementById('chatSend'),chatInput=document.getElementById('chatInput'),chatBody=document.getElementById('chatBody');
 chatFab.onclick=()=>chatPanel.style.display='flex';
 document.getElementById('closeChat').onclick=()=>chatPanel.style.display='none';
