@@ -66,6 +66,12 @@
     .bubble.ai{background:#f1f1f1;color:#111;align-self:flex-start;border-bottom-left-radius:4px}
     .input-warning{color:#b71c1c;font-size:12px;margin-top:6px}
     @media (max-width:600px){ .chat-panel{right:12px;left:12px;width:auto} .receipt{width:92vw} }
+
+    /* Toast styles (minimal, non-invasive) */
+    .toast { position: fixed; bottom: 96px; right: 22px; padding: 12px 16px; border-radius: 10px; color: #fff; font-weight:700; z-index: 99999; box-shadow: 0 8px 20px rgba(0,0,0,0.2); opacity: 0; transform: translateY(10px); transition: opacity .25s ease, transform .25s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #2ecc71; }
+    .toast.error { background: #e74c3c; }
   </style>
 </head>
 <body>
@@ -366,12 +372,30 @@
    // Send email confirmation (using EmailJS) — only for Order Confirmation as requested
    sendOrderConfirmationEmail(order, payload).catch(err=>{
      console.warn('Email send error', err);
+     // Keep original behavior of notifying via chatbot but we now also show toast in send function.
      addAIMessage('EcoAssist: Could not send confirmation email automatically.');
    });
  }
 
  /* ---------- Email sending via EmailJS (Order Confirmation only) ---------- */
  // Using service id: service_66ulev4, template id: template_iodybaq, public key already initialized earlier
+
+ // Helper: show toast (used for email success/failure)
+ function showEmailToast(message, isError=false){
+   try{
+     const t = document.createElement('div');
+     t.className = 'toast ' + (isError ? 'error' : 'success');
+     t.textContent = message;
+     document.body.appendChild(t);
+     // show
+     requestAnimationFrame(()=> t.classList.add('show'));
+     // auto-hide after 4s
+     setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=> t.remove(), 300); }, 4000);
+   }catch(e){
+     console.warn('Toast failed', e);
+   }
+ }
+
  function sendOrderConfirmationEmail(order, payload){
    return new Promise((resolve, reject)=>{
      if(!window.emailjs){ reject('EmailJS not loaded'); return; }
@@ -388,8 +412,21 @@
        date: order.placedAt
      };
      emailjs.send('service_66ulev4','template_iodybaq', templateParams)
-       .then((resp)=>{ addAIMessage(`EcoAssist: Confirmation email sent to ${toEmail}.`); resolve(resp); })
-       .catch((err)=>{ addAIMessage('EcoAssist: Failed to send confirmation email.'); reject(err); });
+       .then((resp)=>{ 
+         console.log('✅ EmailJS response:', resp);
+         // Show toast success
+         showEmailToast(`✅ Order confirmation email sent to ${toEmail}`);
+         // Keep the chatbot notification as originally present (optional)
+         addAIMessage(`EcoAssist: Confirmation email sent to ${toEmail}.`);
+         resolve(resp); 
+       })
+       .catch((err)=>{ 
+         console.error('❌ EmailJS error:', err);
+         // Show toast error
+         showEmailToast('❌ Could not send confirmation email automatically.', true);
+         addAIMessage('EcoAssist: Failed to send confirmation email.');
+         reject(err); 
+       });
    });
  }
 
