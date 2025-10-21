@@ -120,11 +120,11 @@
     <label>Mode of payment</label>
     <select id="custPayment">
       <option value="">Select payment</option>
-      <option value="Gcash">GCash</option>
-      <option value="Bank">Bank Transfer</option>
+      <option value="Gcash">GCash (+₱10)</option>
+      <option value="Bank">Bank Transfer (+₱20)</option>
       <option value="COD">Cash on Delivery (COD)</option>
     </select>
-    <div id="paymentDetails"></div>
+    <div id="paymentDetails" class="small" style="margin-top:8px;"></div>
     <div style="margin-top:12px;">
       <button id="placeOrderBtn" class="btn">Place Order</button>
     </div>
@@ -138,6 +138,7 @@
           <th>Total</th>
           <th>Payment</th>
           <th>Status</th>
+          <th>ETA</th>
           <th>Progress</th>
           <th>Action</th>
         </tr>
@@ -180,6 +181,7 @@
     <div style="margin-top:8px"><strong>Address</strong><div id="rAddress" class="small"></div></div>
     <table id="receiptItems" aria-hidden="false"></table>
     <div class="total" id="receiptTotal"></div>
+    <div class="small" id="receiptFeeNote" style="margin-top:8px;color:#8a1f1f;"></div>
     <div class="actions">
       <button class="print-btn" onclick="printReceipt()">Print</button>
       <button class="close-btn" onclick="closeReceipt()">Close</button>
@@ -202,9 +204,14 @@
 </div>
 
 <script>
+/* ---------- Config (fees & ETA window) ---------- */
+const PAYMENT_FEES = { 'Gcash': 10, 'Bank': 20, 'COD': 0 };
+const ETA_MIN_DAYS = 3;
+const ETA_MAX_DAYS = 5;
+
 /* ---------- Data stores ---------- */
 const cart = []; // {name,price,qty}
-const orders = []; // {id, items, total, payment, status, progress, _trackingInterval}
+const orders = []; // {id, items, total, payment, status, progress, fee, etaFrom, etaTo, _trackingInterval, cancelledAt}
 
 /* ---------- Cart logic ---------- */
 const cartList = document.getElementById('cartList');
@@ -216,14 +223,12 @@ function addToCartFromBtn(btn){
   const price = Number(card.dataset.price || card.querySelector('.price')?.innerText.replace(/[^0-9.-]+/g,"") || 0);
   addToCart(name, price);
 }
-
 function addToCart(name, price){
   const existing = cart.find(i => i.name === name);
   if(existing) existing.qty++;
   else cart.push({name, price, qty:1});
   renderCart();
 }
-
 function renderCart(){
   cartList.innerHTML = '';
   let total = 0;
@@ -250,6 +255,15 @@ function changeQty(i, delta){ cart[i].qty = Math.max(1, cart[i].qty + delta); re
 function removeItem(i){ cart.splice(i,1); renderCart(); }
 document.querySelectorAll('.add-to-cart').forEach(btn => btn.addEventListener('click', (e) => { addToCartFromBtn(e.target); }));
 
+/* ---------- Helpers ---------- */
+function generateOrderId(){ return 'ECO' + Date.now().toString(36).toUpperCase().slice(-8); }
+function daysFromNow(n){
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toLocaleDateString();
+}
+function formatETA(from, to){ return `${from} – ${to}`; }
+
 /* ---------- Checkout & Orders ---------- */
 const receiptModal = document.getElementById('receiptModal');
 const receiptMeta = document.getElementById('receiptMeta');
@@ -257,11 +271,8 @@ const rName = document.getElementById('rName');
 const rAddress = document.getElementById('rAddress');
 const receiptItems = document.getElementById('receiptItems');
 const receiptTotal = document.getElementById('receiptTotal');
+const receiptFeeNote = document.getElementById('receiptFeeNote');
 const orderHistoryBody = document.querySelector('#orderHistory tbody');
-
-function generateOrderId(){
-  return 'ECO' + Date.now().toString(36).toUpperCase().slice(-8);
-}
 
 function placeOrder(){
   const name = document.getElementById('custName').value.trim();
@@ -272,16 +283,22 @@ function placeOrder(){
 
   const id = generateOrderId();
   const date = new Date().toLocaleString();
-
-  // Build order record
   const itemsCopy = cart.map(i => ({...i}));
-  const total = itemsCopy.reduce((s,it)=>s+it.price*it.qty,0);
+  const subtotal = itemsCopy.reduce((s,it)=>s + it.price * it.qty, 0);
+  const fee = PAYMENT_FEES[payment] || 0;
+  const total = subtotal + fee;
+
+  // ETA calculation (3-5 days)
+  const etaFrom = daysFromNow(ETA_MIN_DAYS);
+  const etaTo = daysFromNow(ETA_MAX_DAYS);
+
+  // initial status
   const status = (payment === 'COD') ? 'Pending' : 'Processing';
-  const order = { id, items: itemsCopy, total, payment, status, progress: (status==='Processing'?5:0), _trackingInterval: null };
-  orders.unshift(order); // newest first
+  const order = { id, items: itemsCopy, subtotal, fee, total, payment, status, progress: (status==='Processing'?5:0), etaFrom, etaTo, _trackingInterval: null, cancelledAt: null, placedAt: date };
+  orders.unshift(order);
   renderOrders();
 
-  // Show receipt modal
+  // Show receipt
   receiptMeta.innerText = `Order #${id} · ${date} · ${payment}`;
   rName.innerText = name;
   rAddress.innerText = address;
@@ -291,12 +308,11 @@ function placeOrder(){
     row.innerHTML = `<td style="text-align:left">${it.name} x ${it.qty}</td><td style="text-align:right">₱${it.price*it.qty}</td>`;
     receiptItems.appendChild(row);
   });
-  const tax = 0;
-  const grand = total + tax;
-  receiptTotal.innerHTML = `<div class="small">Subtotal: ₱${total}</div><div class="small">Tax: ₱${tax}</div><div class="total">Total: ₱${grand}</div>`;
+  receiptTotal.innerHTML = `<div class="small">Subtotal: ₱${subtotal}</div><div class="small">Payment fee: ₱${fee}</div><div class="total">Total: ₱${total}</div><div class="small">Estimated Delivery: ${formatETA(etaFrom, etaTo)}</div>`;
+  receiptFeeNote.innerText = fee>0 ? `Note: Payment fee of ₱${fee} is a processing charge and is non-refundable if you cancel the order.` : '';
   receiptModal.style.display = 'flex';
 
-  // Reset cart and fields
+  // Clear cart & fields
   cart.length = 0;
   renderCart();
   document.getElementById('custName').value = '';
@@ -311,9 +327,7 @@ function printReceipt(){
   const content = document.getElementById('receiptContent').innerHTML;
   const w = window.open('','_blank','width=600,height=700');
   w.document.write(`<html><head><title>Receipt</title></head><body>${content}</body></html>`);
-  w.document.close();
-  w.focus();
-  setTimeout(()=> w.print(),300);
+  w.document.close(); w.focus(); setTimeout(()=> w.print(),300);
 }
 
 /* ---------- Order History Rendering ---------- */
@@ -327,7 +341,6 @@ function statusTagHTML(status){
 }
 
 function isCancellable(status){
-  // Only allow cancellation for Pending or Processing
   return (status === 'Pending' || status === 'Processing');
 }
 
@@ -336,7 +349,7 @@ function renderOrders(){
   orders.forEach((o, idx) => {
     const items = o.items.map(it => `${it.name} x${it.qty}`).join(', ');
     const progId = `prog-${o.id}`;
-    // Build action buttons
+    // Actions: Mark Paid (Pending); Track; Cancel (allowed for Pending/Processing); Details
     const actionParts = [];
     if(o.status === 'Pending'){
       actionParts.push(`<button class="btn" onclick="markPaid(${idx})" style="padding:6px 8px;">Mark Paid</button>`);
@@ -345,18 +358,17 @@ function renderOrders(){
     if(isCancellable(o.status)){
       actionParts.push(`<button class="btn" onclick="cancelOrder(${idx})" style="padding:6px 8px;background:#f44336">Cancel</button>`);
     } else {
-      // show disabled cancel for clarity when not allowed
       actionParts.push(`<button class="btn" disabled style="padding:6px 8px;background:#eee;color:#666;cursor:not-allowed">Cancel</button>`);
     }
     actionParts.push(`<button class="btn" onclick="openOrderDetails(${idx})" style="padding:6px 8px;background:#999">Details</button>`);
-
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${o.id}</td>
       <td>${items}</td>
-      <td>₱${o.total}</td>
+      <td>₱${o.total} ${o.fee>0?`<div class="small">fee: ₱${o.fee}</div>`:''}</td>
       <td>${o.payment}</td>
       <td>${statusTagHTML(o.status)}</td>
+      <td>${formatETA(o.etaFrom, o.etaTo)}</td>
       <td>
         <div class="progress-wrap" title="${Math.round(o.progress || 0)}%">
           <div id="${progId}" class="progress-bar" style="width:${o.progress || 0}%"></div>
@@ -379,33 +391,29 @@ function markPaid(index){
   addAIMessage(`EcoAssist: Order ${o.id} marked as Paid — processing has started.`);
 }
 
-/* ---------- Cancel order (NEW) ---------- */
+/* ---------- Cancel order (Order History only) ---------- */
 function cancelOrder(index){
   const o = orders[index];
   if(!o) return;
   if(!isCancellable(o.status)){ alert('This order cannot be cancelled.'); return; }
-  if(!confirm(`Are you sure you want to cancel order ${o.id}?`)) return;
+  if(!confirm(`Cancel order ${o.id}? Note: payment processing fee of ₱${o.fee} (if any) is non-refundable.`)) return;
 
-  // Stop any active tracking interval for this order
-  if(o._trackingInterval){
-    clearInterval(o._trackingInterval);
-    o._trackingInterval = null;
-  }
-  // set status to Cancelled and reset progress
+  // Stop tracking if active
+  if(o._trackingInterval){ clearInterval(o._trackingInterval); o._trackingInterval = null; }
   o.status = 'Cancelled';
   o.progress = 0;
-  // optionally attach cancellation timestamp
   o.cancelledAt = new Date().toLocaleString();
   renderOrders();
-  addAIMessage(`EcoAssist: Order ${o.id} has been cancelled successfully.`);
+  addAIMessage(`EcoAssist: Order ${o.id} has been cancelled. Payment fee of ₱${o.fee} is non-refundable and will be retained.`);
 }
 
 /* ---------- Order details (receipt-like) ---------- */
 function openOrderDetails(index){
   const o = orders[index];
+  if(!o) return;
   receiptModal.style.display = 'flex';
-  receiptMeta.innerText = `Order #${o.id} · ${new Date().toLocaleString()}`;
-  rName.innerText = '(Order details)';
+  receiptMeta.innerText = `Order #${o.id} · ${o.placedAt} · ${o.payment}`;
+  rName.innerText = '(Order history)';
   rAddress.innerText = '';
   receiptItems.innerHTML = '';
   o.items.forEach(it => {
@@ -413,21 +421,22 @@ function openOrderDetails(index){
     r.innerHTML = `<td>${it.name} x${it.qty}</td><td style="text-align:right">₱${it.price*it.qty}</td>`;
     receiptItems.appendChild(r);
   });
-  receiptTotal.innerText = 'Total: ₱' + o.total + (o.cancelledAt ? `\nCancelled at: ${o.cancelledAt}` : '');
-  // prefill refund order id if user wants to refund
+  receiptTotal.innerHTML = `<div class="small">Subtotal: ₱${o.subtotal}</div><div class="small">Processing fee: ₱${o.fee}</div><div class="total">Total: ₱${o.total}</div><div class="small">Estimated Delivery: ${formatETA(o.etaFrom, o.etaTo)}</div>`;
+  receiptFeeNote.innerText = o.fee>0 ? `Note: Payment fee of ₱${o.fee} is non-refundable if you cancel.` : '';
+  // prefill refund order id field if needed
   document.getElementById('refundOrderId').value = o.id;
 }
 
-/* ---------- Tracking simulation (auto-update over time) ---------- */
+/* ---------- Tracking simulation (auto-update) ---------- */
 function startTracking(index){
   const order = orders[index];
   if(!order) return;
   if(order.status === 'Delivered'){ alert('Order already delivered.'); return; }
   if(order.status === 'Cancelled'){ alert('Order was cancelled.'); return; }
 
-  // If COD and still Pending, prompt to mark paid first
+  // If COD and still Pending, ask to mark paid
   if(order.payment === 'COD' && order.status === 'Pending'){
-    if(!confirm('This order is COD and still Pending. Mark it as Paid now to start tracking?')) return;
+    if(!confirm('Order is COD and still Pending. Mark as Paid now to start tracking?')) return;
     markPaid(index);
   }
 
@@ -438,40 +447,27 @@ function startTracking(index){
     {status: 'Delivered', target: 100}
   ];
   let step = 0;
-
-  // Clear any existing interval
   if(order._trackingInterval) clearInterval(order._trackingInterval);
 
-  // Use interval that updates progress gradually and advances through steps
   order._trackingInterval = setInterval(() => {
     if(order.status === 'Cancelled'){
-      clearInterval(order._trackingInterval);
-      order._trackingInterval = null;
-      renderOrders();
-      return;
+      clearInterval(order._trackingInterval); order._trackingInterval = null; renderOrders(); return;
     }
     const currentStep = steps[step];
-    // increase progress towards target
-    const increment = 6; // adjust for speed
+    const increment = 6;
     order.progress = Math.min((order.progress || 0) + increment, currentStep.target);
-    // update progress bar element directly if present
     const bar = document.getElementById(`prog-${order.id}`);
     if(bar) bar.style.width = order.progress + '%';
-    // when reached target, finalize step
     if(order.progress >= currentStep.target){
       order.status = currentStep.status;
       renderOrders();
-      addAIMessage(`EcoAssist: Order ${order.id} status updated — ${order.status}.`);
+      addAIMessage(`EcoAssist: Order ${order.id} is now ${order.status}.`);
       step++;
       if(step >= steps.length){
-        // reached delivered, stop interval
-        if(order._trackingInterval){
-          clearInterval(order._trackingInterval);
-          order._trackingInterval = null;
-        }
+        if(order._trackingInterval){ clearInterval(order._trackingInterval); order._trackingInterval = null; }
       }
     }
-  }, 1800); // update every 1.8s (simulation)
+  }, 1800);
 }
 
 /* ---------- Refund handling ---------- */
@@ -479,30 +475,31 @@ document.getElementById('refundBtn').addEventListener('click', () => {
   const id = document.getElementById('refundOrderId').value.trim();
   const reason = document.getElementById('refundReason').value.trim();
   const method = document.getElementById('refundMethod').value;
-  if(!id || !reason || !method){
-    alert('Please provide Order ID, reason, and refund method.');
-    return;
-  }
+  if(!id || !reason || !method){ alert('Please provide Order ID, reason, and refund method.'); return; }
+  // Show confirm and AI note; actual money handling is out of scope in demo
   document.getElementById('refundConfirm').style.display = 'block';
-  addAIMessage(`EcoAssist: Refund request for ${id} received (method: ${method}). We'll process it within 3–5 business days.`);
+  addAIMessage(`EcoAssist: Refund request for ${id} received (method: ${method}). Note: payment processing fee (if any) is non-refundable for cancelled orders.`);
   document.getElementById('refundOrderId').value = '';
   document.getElementById('refundReason').value = '';
   document.getElementById('refundMethod').value = '';
   setTimeout(()=>{ document.getElementById('refundConfirm').style.display='none'; }, 4000);
 });
 
-/* ---------- Payment option fields ---------- */
+/* ---------- Payment option fields (show fee & brief note) ---------- */
 const custPayment = document.getElementById('custPayment');
 const paymentDetails = document.getElementById('paymentDetails');
 custPayment.addEventListener('change', () => {
   const choice = custPayment.value;
   paymentDetails.innerHTML = '';
   if(choice === 'Gcash'){
-    paymentDetails.innerHTML = `<label class="small">GCash number</label><input id="gcashNumber" placeholder="09XXXXXXXXX">`;
+    paymentDetails.innerHTML = `<div class="small">Processing fee: ₱${PAYMENT_FEES['Gcash']} (non-refundable on cancel)</div><label class="small">GCash number</label><input id="gcashNumber" placeholder="09XXXXXXXXX">`;
   } else if(choice === 'Bank'){
-    paymentDetails.innerHTML = `<label class="small">Bank</label>
+    paymentDetails.innerHTML = `<div class="small">Processing fee: ₱${PAYMENT_FEES['Bank']} (non-refundable on cancel)</div>
+      <label class="small">Bank</label>
       <select id="bankName"><option value="">Select bank</option><option>BDO</option><option>BPI</option><option>Metrobank</option></select>
       <label class="small" style="margin-top:8px;display:block">Account no.</label><input id="bankAccountNumber" placeholder="Account number">`;
+  } else if(choice === 'COD'){
+    paymentDetails.innerHTML = `<div class="small">No processing fee for COD.</div>`;
   }
 });
 
@@ -528,15 +525,16 @@ function appendChatBubble(role, text){
 
 function aiReply(text){
   const t = text.toLowerCase();
-  if(t.includes('price') || t.includes('cost')) return 'Prices: Bamboo ₱250, Coconut Fiber Board ₱300, Fly Ash Concrete ₱220, Recycled Aggregates ₱180.';
-  if(t.includes('refund')) return 'Use the Refund section below Checkout or open your receipt and request a refund there.';
-  if(t.includes('track') || t.includes('status')) return 'Open Order History and click "Track Delivery" for live progress updates.';
-  if(t.includes('order')) return 'Place your order using Checkout — a receipt and order ID will appear after placing.';
-  if(t.includes('hello') || t.includes('hi')) return 'Hi! I\'m EcoAssist — how can I help with your order or product info?';
-  return 'I can help with product info, orders, payment, and refunds — try "price", "refund", or "track order".';
+  if(t.includes('price') || t.includes('cost')) return 'Prices: Bamboo ₱250, Coconut Fiber Board ₱300, Fly Ash Concrete ₱220, Recycled Aggregates ₱180. Payment fees: GCash ₱10, Bank ₱20, COD ₱0.';
+  if(t.includes('refund')) return 'Refunds: use the Refund section. Note: payment processing fees are non-refundable if order is cancelled.';
+  if(t.includes('track') || t.includes('status')) return 'Open Order History and click "Track Delivery" for live progress updates; ETA appears in the ETA column.';
+  if(t.includes('eta') || t.includes('delivery')) return 'ETA is shown on the receipt and Order History (typically 3–5 days after order).';
+  if(t.includes('cancel')) return 'To cancel an order, go to Order History and click Cancel on orders marked Pending or Processing.';
+  if(t.includes('order')) return 'Place your order using Checkout — receipts with Order ID and ETA appear immediately after placing.';
+  if(t.includes('hello') || t.includes('hi')) return 'Hi! I\'m EcoAssist — I can help with product info, orders, fees, and tracking.';
+  return 'I can help with product info, orders, fees, ETA, and refunds — try "price", "track", "cancel order", or "refund".';
 }
 
-// ensure single reply per send
 let chatLocked = false;
 chatSend.addEventListener('click', () => {
   if(chatLocked) return;
@@ -545,27 +543,21 @@ chatSend.addEventListener('click', () => {
   appendChatBubble('user', txt);
   chatInput.value = '';
   chatLocked = true;
-
-  // typing indicator
   const typing = document.createElement('div');
   typing.id = 'typingDots';
   typing.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
   chatBody.appendChild(typing);
   chatBody.scrollTop = chatBody.scrollHeight;
-
   setTimeout(()=> {
     const reply = aiReply(txt);
-    const dots = document.getElementById('typingDots');
-    if(dots) dots.remove();
+    const dots = document.getElementById('typingDots'); if(dots) dots.remove();
     appendChatBubble('ai', reply);
     chatLocked = false;
   }, 700);
 });
+setTimeout(()=> appendChatBubble('ai', "Hello! I'm EcoAssist — I can help with product info, cart help, fees, and order tracking."), 600);
 
-// initial greeting
-setTimeout(()=> appendChatBubble('ai', "Hello! I'm EcoAssist — I can help with product info, cart help, and order tracking."), 600);
-
-/* ---------- Utility: AI pushes (used elsewhere) ---------- */
+/* ---------- Utility ---------- */
 function addAIMessage(text){
   chatPanel.style.display = 'flex';
   appendChatBubble('ai', text);
