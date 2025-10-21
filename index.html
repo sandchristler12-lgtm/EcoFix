@@ -33,13 +33,13 @@
   table{width:100%;border-collapse:collapse;margin-top:10px}
   table th,table td{border:1px solid #e1e1e1;padding:8px;text-align:left;font-size:14px}
   .progress-wrap{background:#eee;border-radius:8px;height:12px;overflow:hidden;width:120px}
-  .progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#4caf50,#8bc34a)}
+  .progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#4caf50,#8bc34a);transition:width .4s linear}
   .status-tag{padding:6px 8px;border-radius:6px;font-weight:600}
   .status-pending{background:#fff4e5;color:#8a5300}
   .status-processing{background:#fff9e6;color:#7a5b00}
   .status-out{background:#e6f7ff;color:#025f8a}
   .status-delivered{background:#e8f5e9;color:#155724}
-  .status-cancelled{background:#fdecea;color:#8a1f1f}
+  .status-cancelled{background:#ffeceb;color:#8a1f1f}
   .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9999}
   .receipt{width:360px;background:#fff;border-radius:12px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,0.3);font-size:14px}
   .refund{background:#f0fff0;padding:16px;border-radius:12px;margin-top:18px}
@@ -202,9 +202,9 @@
 </div>
 
 <script>
-/* ---------- Data & runtime control ---------- */
-const cart = []; // {name, price, qty}
-const orders = []; // {id, items:[], total, payment, status, progress, trackingIntervalId}
+/* ---------- Data stores ---------- */
+const cart = []; // {name,price,qty}
+const orders = []; // {id, items, total, payment, status, progress, _trackingInterval}
 
 /* ---------- Cart logic ---------- */
 const cartList = document.getElementById('cartList');
@@ -239,16 +239,18 @@ function renderCart(){
         <button onclick="changeQty(${idx},1)" style="padding:6px;border-radius:8px;border:1px solid #ddd;background:#fff">+</button>
         <button onclick="removeItem(${idx})" style="padding:6px;border-radius:8px;border:1px solid #eee;background:#fff">Remove</button>
       </div>`;
-    li.style.display='flex'; li.style.justifyContent='space-between'; li.style.alignItems='center';
+    li.style.display = 'flex';
+    li.style.justifyContent = 'space-between';
+    li.style.alignItems = 'center';
     cartList.appendChild(li);
   });
   cartTotalEl.innerText = `Total: ₱${total}`;
 }
 function changeQty(i, delta){ cart[i].qty = Math.max(1, cart[i].qty + delta); renderCart(); }
 function removeItem(i){ cart.splice(i,1); renderCart(); }
-document.querySelectorAll('.add-to-cart').forEach(btn => btn.addEventListener('click', (e)=>{ addToCartFromBtn(e.target); }));
+document.querySelectorAll('.add-to-cart').forEach(btn => btn.addEventListener('click', (e) => { addToCartFromBtn(e.target); }));
 
-/* ---------- Orders / Receipt ---------- */
+/* ---------- Checkout & Orders ---------- */
 const receiptModal = document.getElementById('receiptModal');
 const receiptMeta = document.getElementById('receiptMeta');
 const rName = document.getElementById('rName');
@@ -271,21 +273,22 @@ function placeOrder(){
   const id = generateOrderId();
   const date = new Date().toLocaleString();
 
+  // Build order record
   const itemsCopy = cart.map(i => ({...i}));
-  const total = itemsCopy.reduce((s,it)=>s + it.price * it.qty, 0);
+  const total = itemsCopy.reduce((s,it)=>s+it.price*it.qty,0);
   const status = (payment === 'COD') ? 'Pending' : 'Processing';
-  const order = { id, items: itemsCopy, total, payment, status, progress: (status==='Processing'?5:0), trackingIntervalId: null };
+  const order = { id, items: itemsCopy, total, payment, status, progress: (status==='Processing'?5:0), _trackingInterval: null };
   orders.unshift(order); // newest first
   renderOrders();
 
-  // show receipt modal
+  // Show receipt modal
   receiptMeta.innerText = `Order #${id} · ${date} · ${payment}`;
   rName.innerText = name;
   rAddress.innerText = address;
   receiptItems.innerHTML = '';
   itemsCopy.forEach(it => {
     const row = document.createElement('tr');
-    row.innerHTML = `<td style="text-align:left">${it.name} x ${it.qty}</td><td style="text-align:right">₱${it.price * it.qty}</td>`;
+    row.innerHTML = `<td style="text-align:left">${it.name} x ${it.qty}</td><td style="text-align:right">₱${it.price*it.qty}</td>`;
     receiptItems.appendChild(row);
   });
   const tax = 0;
@@ -293,7 +296,7 @@ function placeOrder(){
   receiptTotal.innerHTML = `<div class="small">Subtotal: ₱${total}</div><div class="small">Tax: ₱${tax}</div><div class="total">Total: ₱${grand}</div>`;
   receiptModal.style.display = 'flex';
 
-  // clear cart and inputs
+  // Reset cart and fields
   cart.length = 0;
   renderCart();
   document.getElementById('custName').value = '';
@@ -308,11 +311,12 @@ function printReceipt(){
   const content = document.getElementById('receiptContent').innerHTML;
   const w = window.open('','_blank','width=600,height=700');
   w.document.write(`<html><head><title>Receipt</title></head><body>${content}</body></html>`);
-  w.document.close(); w.focus();
-  setTimeout(()=> w.print(), 300);
+  w.document.close();
+  w.focus();
+  setTimeout(()=> w.print(),300);
 }
 
-/* ---------- Render Orders ---------- */
+/* ---------- Order History Rendering ---------- */
 function statusTagHTML(status){
   if(status==='Pending') return `<span class="status-tag status-pending">Pending</span>`;
   if(status==='Processing') return `<span class="status-tag status-processing">Processing</span>`;
@@ -322,17 +326,30 @@ function statusTagHTML(status){
   return `<span class="status-tag">${status}</span>`;
 }
 
+function isCancellable(status){
+  // Only allow cancellation for Pending or Processing
+  return (status === 'Pending' || status === 'Processing');
+}
+
 function renderOrders(){
   orderHistoryBody.innerHTML = '';
   orders.forEach((o, idx) => {
     const items = o.items.map(it => `${it.name} x${it.qty}`).join(', ');
     const progId = `prog-${o.id}`;
-    // actions: Mark Paid (only if Pending), Track (if not Cancelled/Delivered), Cancel (only if not Cancelled/Delivered)
-    const actions = [];
-    if(o.status === 'Pending') actions.push(`<button class="btn" onclick="markPaid(${idx})" style="padding:6px 8px;">Mark Paid</button>`);
-    if(o.status !== 'Cancelled' && o.status !== 'Delivered') actions.push(`<button class="btn" onclick="startTracking(${idx})" style="padding:6px 8px;background:#1976d2">Track Delivery</button>`);
-    // Cancel button only in order history section (as requested) and only when allowed
-    if(o.status !== 'Cancelled' && o.status !== 'Delivered') actions.push(`<button class="btn" onclick="cancelOrder(${idx})" style="padding:6px 8px;background:#f44336">Cancel</button>`);
+    // Build action buttons
+    const actionParts = [];
+    if(o.status === 'Pending'){
+      actionParts.push(`<button class="btn" onclick="markPaid(${idx})" style="padding:6px 8px;">Mark Paid</button>`);
+    }
+    actionParts.push(`<button class="btn" onclick="startTracking(${idx})" style="padding:6px 8px;background:#1976d2">Track Delivery</button>`);
+    if(isCancellable(o.status)){
+      actionParts.push(`<button class="btn" onclick="cancelOrder(${idx})" style="padding:6px 8px;background:#f44336">Cancel</button>`);
+    } else {
+      // show disabled cancel for clarity when not allowed
+      actionParts.push(`<button class="btn" disabled style="padding:6px 8px;background:#eee;color:#666;cursor:not-allowed">Cancel</button>`);
+    }
+    actionParts.push(`<button class="btn" onclick="openOrderDetails(${idx})" style="padding:6px 8px;background:#999">Details</button>`);
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${o.id}</td>
@@ -341,54 +358,54 @@ function renderOrders(){
       <td>${o.payment}</td>
       <td>${statusTagHTML(o.status)}</td>
       <td>
-        <div class="progress-wrap" title="${o.progress}%">
-          <div id="${progId}" class="progress-bar" style="width:${o.progress}%"></div>
+        <div class="progress-wrap" title="${Math.round(o.progress || 0)}%">
+          <div id="${progId}" class="progress-bar" style="width:${o.progress || 0}%"></div>
         </div>
       </td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap">${actions.join('')}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">${actionParts.join('')}</td>
     `;
     orderHistoryBody.appendChild(tr);
   });
 }
 
-/* ---------- Mark Paid ---------- */
+/* ---------- Mark paid ---------- */
 function markPaid(index){
   const o = orders[index];
   if(!o) return;
-  if(o.status === 'Cancelled' || o.status === 'Delivered'){ alert('Cannot mark this order as paid.'); return; }
+  if(o.status !== 'Pending'){ alert('Order cannot be marked paid at this time.'); return; }
   o.status = 'Processing';
-  if(!o.progress) o.progress = 5;
+  o.progress = 5;
   renderOrders();
-  addAIMessage(`EcoAssist: Order ${o.id} marked as Paid and is now Processing.`);
+  addAIMessage(`EcoAssist: Order ${o.id} marked as Paid — processing has started.`);
 }
 
-/* ---------- Cancel Order (in Order History only) ---------- */
+/* ---------- Cancel order (NEW) ---------- */
 function cancelOrder(index){
   const o = orders[index];
   if(!o) return;
-  if(o.status === 'Cancelled'){ alert('Order already cancelled.'); return; }
-  if(o.status === 'Delivered'){ alert('Delivered orders cannot be cancelled.'); return; }
-  if(!confirm(`Cancel order ${o.id}? This will stop tracking and cannot be undone.`)) return;
+  if(!isCancellable(o.status)){ alert('This order cannot be cancelled.'); return; }
+  if(!confirm(`Are you sure you want to cancel order ${o.id}?`)) return;
 
-  // stop any tracking interval if running
-  if(o.trackingIntervalId){
-    clearInterval(o.trackingIntervalId);
-    o.trackingIntervalId = null;
+  // Stop any active tracking interval for this order
+  if(o._trackingInterval){
+    clearInterval(o._trackingInterval);
+    o._trackingInterval = null;
   }
-  // set status and progress
+  // set status to Cancelled and reset progress
   o.status = 'Cancelled';
   o.progress = 0;
+  // optionally attach cancellation timestamp
+  o.cancelledAt = new Date().toLocaleString();
   renderOrders();
   addAIMessage(`EcoAssist: Order ${o.id} has been cancelled successfully.`);
 }
 
-/* ---------- Open order details (receipt modal) ---------- */
+/* ---------- Order details (receipt-like) ---------- */
 function openOrderDetails(index){
   const o = orders[index];
-  if(!o) return;
   receiptModal.style.display = 'flex';
   receiptMeta.innerText = `Order #${o.id} · ${new Date().toLocaleString()}`;
-  rName.innerText = '(Order history)';
+  rName.innerText = '(Order details)';
   rAddress.innerText = '';
   receiptItems.innerHTML = '';
   o.items.forEach(it => {
@@ -396,77 +413,65 @@ function openOrderDetails(index){
     r.innerHTML = `<td>${it.name} x${it.qty}</td><td style="text-align:right">₱${it.price*it.qty}</td>`;
     receiptItems.appendChild(r);
   });
-  receiptTotal.innerText = 'Total: ₱' + o.total;
+  receiptTotal.innerText = 'Total: ₱' + o.total + (o.cancelledAt ? `\nCancelled at: ${o.cancelledAt}` : '');
+  // prefill refund order id if user wants to refund
   document.getElementById('refundOrderId').value = o.id;
 }
 
-/* ---------- Tracking simulation (update by user action) ---------- */
+/* ---------- Tracking simulation (auto-update over time) ---------- */
 function startTracking(index){
-  const o = orders[index];
-  if(!o) return;
-  if(o.status === 'Cancelled'){ alert('This order has been cancelled.'); return; }
-  if(o.status === 'Delivered'){ alert('Order already delivered.'); return; }
+  const order = orders[index];
+  if(!order) return;
+  if(order.status === 'Delivered'){ alert('Order already delivered.'); return; }
+  if(order.status === 'Cancelled'){ alert('Order was cancelled.'); return; }
 
-  // If COD and still Pending -> request to mark paid
-  if(o.payment === 'COD' && o.status === 'Pending'){
-    if(!confirm('This is COD and still Pending. Mark as Paid now to start tracking?')) return;
-    o.status = 'Processing';
-    o.progress = 5;
-    renderOrders();
-    addAIMessage(`EcoAssist: Order ${o.id} was set to Processing to start tracking.`);
+  // If COD and still Pending, prompt to mark paid first
+  if(order.payment === 'COD' && order.status === 'Pending'){
+    if(!confirm('This order is COD and still Pending. Mark it as Paid now to start tracking?')) return;
+    markPaid(index);
   }
 
-  addAIMessage(`EcoAssist: Tracking started for order ${o.id}.`);
-
-  // If an interval already exists for this order, do nothing
-  if(o.trackingIntervalId) return;
-
+  addAIMessage(`EcoAssist: Tracking started for order ${order.id}.`);
   const steps = [
-    { status: 'Processing', target: 30 },
-    { status: 'Out for Delivery', target: 80 },
-    { status: 'Delivered', target: 100 }
+    {status: 'Processing', target: 30},
+    {status: 'Out for Delivery', target: 80},
+    {status: 'Delivered', target: 100}
   ];
-
   let step = 0;
-  // Create an interval reference stored on the order so we can stop it on cancel
-  o.trackingIntervalId = setInterval(() => {
-    if(o.status === 'Cancelled'){
-      clearInterval(o.trackingIntervalId);
-      o.trackingIntervalId = null;
+
+  // Clear any existing interval
+  if(order._trackingInterval) clearInterval(order._trackingInterval);
+
+  // Use interval that updates progress gradually and advances through steps
+  order._trackingInterval = setInterval(() => {
+    if(order.status === 'Cancelled'){
+      clearInterval(order._trackingInterval);
+      order._trackingInterval = null;
+      renderOrders();
       return;
     }
-    const s = steps[step];
-    // animate progress to target gradually (inner small timer)
-    let current = o.progress || 0;
-    const progId = `prog-${o.id}`;
-    const inner = setInterval(() => {
-      if(o.status === 'Cancelled'){
-        clearInterval(inner);
-        clearInterval(o.trackingIntervalId);
-        o.trackingIntervalId = null;
-        renderOrders();
-        return;
-      }
-      if(current >= s.target){
-        clearInterval(inner);
-        o.status = s.status;
-        o.progress = s.target;
-        renderOrders();
-        addAIMessage(`EcoAssist: Order ${o.id} is now ${o.status}.`);
-        step++;
-        if(step >= steps.length){
-          clearInterval(o.trackingIntervalId);
-          o.trackingIntervalId = null;
+    const currentStep = steps[step];
+    // increase progress towards target
+    const increment = 6; // adjust for speed
+    order.progress = Math.min((order.progress || 0) + increment, currentStep.target);
+    // update progress bar element directly if present
+    const bar = document.getElementById(`prog-${order.id}`);
+    if(bar) bar.style.width = order.progress + '%';
+    // when reached target, finalize step
+    if(order.progress >= currentStep.target){
+      order.status = currentStep.status;
+      renderOrders();
+      addAIMessage(`EcoAssist: Order ${order.id} status updated — ${order.status}.`);
+      step++;
+      if(step >= steps.length){
+        // reached delivered, stop interval
+        if(order._trackingInterval){
+          clearInterval(order._trackingInterval);
+          order._trackingInterval = null;
         }
-        return;
       }
-      current += 4;
-      o.progress = Math.min(current, s.target);
-      // update progress bar quickly if present
-      const bar = document.getElementById(progId);
-      if(bar) bar.style.width = o.progress + '%';
-    }, 300);
-  }, 2000);
+    }
+  }, 1800); // update every 1.8s (simulation)
 }
 
 /* ---------- Refund handling ---------- */
@@ -474,17 +479,19 @@ document.getElementById('refundBtn').addEventListener('click', () => {
   const id = document.getElementById('refundOrderId').value.trim();
   const reason = document.getElementById('refundReason').value.trim();
   const method = document.getElementById('refundMethod').value;
-  if(!id || !reason || !method){ alert('Please provide Order ID, reason, and refund method.'); return; }
+  if(!id || !reason || !method){
+    alert('Please provide Order ID, reason, and refund method.');
+    return;
+  }
   document.getElementById('refundConfirm').style.display = 'block';
   addAIMessage(`EcoAssist: Refund request for ${id} received (method: ${method}). We'll process it within 3–5 business days.`);
-  // reset
   document.getElementById('refundOrderId').value = '';
   document.getElementById('refundReason').value = '';
   document.getElementById('refundMethod').value = '';
-  setTimeout(()=>{ document.getElementById('refundConfirm').style.display = 'none'; }, 4000);
+  setTimeout(()=>{ document.getElementById('refundConfirm').style.display='none'; }, 4000);
 });
 
-/* ---------- Payment detail fields ---------- */
+/* ---------- Payment option fields ---------- */
 const custPayment = document.getElementById('custPayment');
 const paymentDetails = document.getElementById('paymentDetails');
 custPayment.addEventListener('change', () => {
@@ -499,65 +506,72 @@ custPayment.addEventListener('change', () => {
   }
 });
 
-/* ---------- Chat (fixed single reply) ---------- */
+/* ---------- AI Chat (fixed) ---------- */
 const chatFab = document.getElementById('chatFab');
 const chatPanel = document.getElementById('chatPanel');
 const chatBody = document.getElementById('chatBody');
 const chatInput = document.getElementById('chatInput');
 const chatSend = document.getElementById('chatSend');
 
-chatFab.addEventListener('click', ()=>{ chatPanel.style.display = 'flex'; chatInput.focus(); });
-document.getElementById('closeChat').addEventListener('click', ()=>{ chatPanel.style.display = 'none'; });
+function openChat(){ chatPanel.style.display = 'flex'; chatInput.focus(); }
+function closeChat(){ chatPanel.style.display = 'none'; }
+chatFab.addEventListener('click', openChat);
+document.getElementById('closeChat').addEventListener('click', closeChat);
 
 function appendChatBubble(role, text){
-  const d = document.createElement('div');
-  d.className = 'bubble ' + (role === 'user' ? 'user' : 'ai');
-  d.textContent = text;
-  chatBody.appendChild(d);
+  const div = document.createElement('div');
+  div.className = 'bubble ' + (role === 'user' ? 'user' : 'ai');
+  div.textContent = text;
+  chatBody.appendChild(div);
   chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-function aiReplyFor(text){
+function aiReply(text){
   const t = text.toLowerCase();
-  if(t.includes('price')||t.includes('cost')) return 'Prices: Bamboo ₱250, Coconut Fiber Board ₱300, Fly Ash Concrete ₱220, Recycled Aggregates ₱180.';
+  if(t.includes('price') || t.includes('cost')) return 'Prices: Bamboo ₱250, Coconut Fiber Board ₱300, Fly Ash Concrete ₱220, Recycled Aggregates ₱180.';
   if(t.includes('refund')) return 'Use the Refund section below Checkout or open your receipt and request a refund there.';
-  if(t.includes('track')||t.includes('status')) return 'Open Order History and click "Track Delivery" for live progress updates.';
+  if(t.includes('track') || t.includes('status')) return 'Open Order History and click "Track Delivery" for live progress updates.';
   if(t.includes('order')) return 'Place your order using Checkout — a receipt and order ID will appear after placing.';
-  if(t.includes('hello')||t.includes('hi')) return "Hi! I'm EcoAssist — how can I help with your order or product info?";
+  if(t.includes('hello') || t.includes('hi')) return 'Hi! I\'m EcoAssist — how can I help with your order or product info?';
   return 'I can help with product info, orders, payment, and refunds — try "price", "refund", or "track order".';
 }
 
+// ensure single reply per send
 let chatLocked = false;
-chatSend.addEventListener('click', ()=> {
+chatSend.addEventListener('click', () => {
   if(chatLocked) return;
   const txt = chatInput.value.trim();
   if(!txt) return;
   appendChatBubble('user', txt);
   chatInput.value = '';
   chatLocked = true;
+
+  // typing indicator
   const typing = document.createElement('div');
   typing.id = 'typingDots';
   typing.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
   chatBody.appendChild(typing);
   chatBody.scrollTop = chatBody.scrollHeight;
+
   setTimeout(()=> {
+    const reply = aiReply(txt);
     const dots = document.getElementById('typingDots');
     if(dots) dots.remove();
-    appendChatBubble('ai', aiReplyFor(txt));
+    appendChatBubble('ai', reply);
     chatLocked = false;
   }, 700);
 });
 
-// initial assistant greeting
+// initial greeting
 setTimeout(()=> appendChatBubble('ai', "Hello! I'm EcoAssist — I can help with product info, cart help, and order tracking."), 600);
 
-/* Utility to push AI notifications */
+/* ---------- Utility: AI pushes (used elsewhere) ---------- */
 function addAIMessage(text){
   chatPanel.style.display = 'flex';
   appendChatBubble('ai', text);
 }
 
-/* ---------- Initialize ---------- */
+/* ---------- Initial render ---------- */
 renderCart();
 renderOrders();
 </script>
