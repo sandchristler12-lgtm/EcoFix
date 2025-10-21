@@ -64,6 +64,7 @@
   .bubble{display:inline-block;padding:8px 12px;border-radius:12px;max-width:84%}
   .bubble.user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
   .bubble.ai{background:#f1f1f1;color:#111;align-self:flex-start;border-bottom-left-radius:4px}
+  .input-warning{color:#b71c1c;font-size:12px;margin-top:6px}
   @media (max-width:600px){ .chat-panel{right:12px;left:12px;width:auto} .receipt{width:92vw} }
 </style>
 </head>
@@ -202,7 +203,7 @@
   </div>
 </div>
 
-<!-- Payment Confirmation Modal -->
+<!-- Receipt & Payment Modals (unchanged style) -->
 <div class="modal-backdrop" id="paymentConfirmModal" role="dialog" aria-hidden="true">
   <div class="receipt" id="paymentConfirmContent">
     <h3>Confirm Payment</h3>
@@ -217,7 +218,6 @@
   </div>
 </div>
 
-<!-- Receipt Modal -->
 <div class="modal-backdrop" id="receiptModal" role="dialog" aria-hidden="true">
   <div class="receipt" id="receiptContent">
     <h3>EcoFix Receipt</h3>
@@ -234,7 +234,7 @@
   </div>
 </div>
 
-<!-- Chat Floating Button + Panel -->
+<!-- Chat -->
 <div class="chat-fab" id="chatFab" title="Chat with EcoAssist">💬</div>
 <div class="chat-panel" id="chatPanel" aria-hidden="true">
   <div class="chat-header">
@@ -249,10 +249,9 @@
 </div>
 
 <script>
-/* ---------- Config & Mock ratings ---------- */
+/* ---------- Config & Mock data ---------- */
 const PAYMENT_FEES = { 'Gcash': 10, 'Bank': 20, 'COD': 0 };
-const ETA_MIN_DAYS = 3;
-const ETA_MAX_DAYS = 5;
+const ETA_MIN_DAYS = 3, ETA_MAX_DAYS = 5;
 const MOCK_RATINGS = {
   "Bamboo Reinforcement": { avg: 4.8, count: 132 },
   "Coconut Fiber Board": { avg: 4.5, count: 89 },
@@ -260,88 +259,29 @@ const MOCK_RATINGS = {
   "Recycled Aggregates": { avg: 3.9, count: 47 }
 };
 
-/* ---------- Data stores ---------- */
-const cart = [];
-const orders = [];
+/* ---------- State ---------- */
+const cart = [], orders = [];
 
 /* ---------- Helpers ---------- */
 function generateOrderId(){ return 'ECO' + Date.now().toString(36).toUpperCase().slice(-8); }
 function daysFromNow(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.toLocaleDateString(); }
 function formatETA(from,to){ return `${from} – ${to}`; }
 
-/* ---------- Cart ---------- */
-const cartList = document.getElementById('cartList');
-const cartTotalEl = document.getElementById('cartTotal');
-
-function addToCartFromBtn(btn){
-  const card = btn.closest('.product');
-  const name = card.dataset.name || card.querySelector('h3').innerText;
-  const price = Number(card.dataset.price || card.querySelector('.price')?.innerText.replace(/[^0-9.-]+/g,"") || 0);
-  addToCart(name, price);
-}
-function addToCart(name, price){
-  const existing = cart.find(i=>i.name===name);
-  if(existing) existing.qty++;
-  else cart.push({name,price,qty:1});
-  renderCart();
-  addAIMessage(`EcoAssist: ${name} added to cart.`);
-}
-function renderCart(){
-  cartList.innerHTML='';
-  let total=0;
-  cart.forEach((it,idx)=>{
-    total+=it.price*it.qty;
-    const li=document.createElement('li');
-    li.innerHTML = `<div style="flex:1"><strong>${it.name}</strong><div class="small">₱${it.price} x ${it.qty}</div></div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button onclick="changeQty(${idx},-1)" style="padding:6px;border-radius:8px;border:1px solid #ddd;background:#fff">-</button>
-        <button onclick="changeQty(${idx},1)" style="padding:6px;border-radius:8px;border:1px solid #ddd;background:#fff">+</button>
-        <button onclick="removeItem(${idx})" style="padding:6px;border-radius:8px;border:1px solid #eee;background:#fff">Remove</button>
-      </div>`;
-    li.style.display='flex'; li.style.justifyContent='space-between'; li.style.alignItems='center';
-    cartList.appendChild(li);
-  });
-  cartTotalEl.innerText = `Total: ₱${total}`;
-}
+/* ---------- Cart handling ---------- */
+const cartList = document.getElementById('cartList'), cartTotalEl = document.getElementById('cartTotal');
+function addToCartFromBtn(btn){ const card = btn.closest('.product'); const name = card.dataset.name || card.querySelector('h3').innerText; const price = Number(card.dataset.price || card.querySelector('.price')?.innerText.replace(/[^0-9.-]+/g,"") || 0); addToCart(name, price); }
+function addToCart(name, price){ const existing = cart.find(i=>i.name===name); if(existing) existing.qty++; else cart.push({name,price,qty:1}); renderCart(); addAIMessage(`EcoAssist: ${name} added to cart.`); }
+function renderCart(){ cartList.innerHTML=''; let total=0; cart.forEach((it,idx)=>{ total+=it.price*it.qty; const li=document.createElement('li'); li.innerHTML=`<div style="flex:1"><strong>${it.name}</strong><div class="small">₱${it.price} x ${it.qty}</div></div><div style="display:flex;gap:8px;align-items:center"><button onclick="changeQty(${idx},-1)" style="padding:6px;border-radius:8px;border:1px solid #ddd;background:#fff">-</button><button onclick="changeQty(${idx},1)" style="padding:6px;border-radius:8px;border:1px solid #ddd;background:#fff">+</button><button onclick="removeItem(${idx})" style="padding:6px;border-radius:8px;border:1px solid #eee;background:#fff">Remove</button></div>`; li.style.display='flex'; li.style.justifyContent='space-between'; li.style.alignItems='center'; cartList.appendChild(li); }); cartTotalEl.innerText=`Total: ₱${total}`; }
 function changeQty(i,delta){ cart[i].qty=Math.max(1,cart[i].qty+delta); renderCart(); }
 function removeItem(i){ cart.splice(i,1); renderCart(); }
 document.querySelectorAll('.add-to-cart').forEach(btn=>btn.addEventListener('click',e=>addToCartFromBtn(e.target)));
 
-/* ---------- Ratings UI ---------- */
-function renderMockRatings(){
-  document.querySelectorAll('.mock-rating').forEach(el=>{
-    const product = el.dataset.product;
-    const m = MOCK_RATINGS[product];
-    if(!m) return;
-    el.innerHTML = `<span class="mock-stars">${'★'.repeat(Math.round(m.avg))}</span> <span class="mock-meta">${m.avg.toFixed(1)} / 5 (${m.count} reviews)</span>`;
-  });
-}
-function initUserRatings(){
-  document.querySelectorAll('.stars').forEach(container=>{
-    const product = container.dataset.product;
-    container.innerHTML='';
-    const stored = Number(localStorage.getItem('rating_'+product) || 0);
-    for(let i=1;i<=5;i++){
-      const span=document.createElement('span');
-      span.className='star'+(i<=stored?' active':'');
-      span.innerHTML='★';
-      span.addEventListener('click',()=>setUserRating(product,i,container));
-      container.appendChild(span);
-    }
-    const lbl=document.createElement('div'); lbl.className='small'; lbl.style.marginTop='6px';
-    lbl.textContent = stored ? `You: ${stored}/5` : 'You: Rate';
-    container.appendChild(lbl);
-  });
-}
-function setUserRating(product,value,container){
-  localStorage.setItem('rating_'+product, value);
-  const stars = container.querySelectorAll('.star');
-  stars.forEach((s,idx)=>s.classList.toggle('active', idx < value));
-  const lbl = container.querySelector('.small'); if(lbl) lbl.textContent = `You: ${value}/5 — Thanks for rating!`;
-  addAIMessage(`EcoAssist: Thanks — you rated ${product} ${value}/5.`);
-}
+/* ---------- Mock ratings UI ---------- */
+function renderMockRatings(){ document.querySelectorAll('.mock-rating').forEach(el=>{ const product = el.dataset.product; const m = MOCK_RATINGS[product]; if(!m) return; el.innerHTML = `<span class="mock-stars">${'★'.repeat(Math.round(m.avg))}</span> <span class="mock-meta">${m.avg.toFixed(1)} / 5 (${m.count} reviews)</span>`; }); }
+function initUserRatings(){ document.querySelectorAll('.stars').forEach(container=>{ const product = container.dataset.product; container.innerHTML=''; const stored = Number(localStorage.getItem('rating_'+product) || 0); for(let i=1;i<=5;i++){ const span=document.createElement('span'); span.className='star'+(i<=stored?' active':''); span.innerHTML='★'; span.addEventListener('click',()=>setUserRating(product,i,container)); container.appendChild(span); } const lbl=document.createElement('div'); lbl.className='small'; lbl.style.marginTop='6px'; lbl.textContent = stored ? `You: ${stored}/5` : 'You: Rate'; container.appendChild(lbl); }); }
+function setUserRating(product,value,container){ localStorage.setItem('rating_'+product, value); const stars = container.querySelectorAll('.star'); stars.forEach((s,idx)=>s.classList.toggle('active', idx < value)); const lbl = container.querySelector('.small'); if(lbl) lbl.textContent = `You: ${value}/5 — Thanks for rating!`; addAIMessage(`EcoAssist: Thanks — you rated ${product} ${value}/5.`); }
 
-/* ---------- Payment confirm & order logic ---------- */
+/* ---------- Payment confirmation modal logic (with validation) ---------- */
 const paymentConfirmModal = document.getElementById('paymentConfirmModal');
 const confirmMeta = document.getElementById('confirmMeta');
 const confirmItems = document.getElementById('confirmItems');
@@ -355,17 +295,35 @@ function openPaymentConfirmation(payload){
   pendingOrderPayload = payload;
   confirmMeta.innerText = `Confirm payment · ${new Date().toLocaleString()}`;
   confirmItems.innerHTML = '';
-  payload.items.forEach(it=>{
-    const d=document.createElement('div'); d.className='small'; d.style.marginBottom='6px';
-    d.innerHTML = `<strong>${it.name}</strong> x ${it.qty} — ₱${it.price*it.qty}`; confirmItems.appendChild(d);
-  });
+  payload.items.forEach(it=>{ const d=document.createElement('div'); d.className='small'; d.style.marginBottom='6px'; d.innerHTML = `<strong>${it.name}</strong> x ${it.qty} — ₱${it.price*it.qty}`; confirmItems.appendChild(d); });
   confirmAmount.innerText = `Total to pay: ₱${payload.total}`;
   confirmFeeNote.innerText = payload.fee>0 ? `Processing fee ₱${payload.fee} is non-refundable if you cancel.` : '';
   paymentConfirmModal.style.display='flex';
 }
 confirmCancelBtn.addEventListener('click', ()=>{ pendingOrderPayload = null; paymentConfirmModal.style.display='none'; });
-confirmPaymentBtn.addEventListener('click', ()=>{ if(!pendingOrderPayload) return; finalizeOrder(pendingOrderPayload); pendingOrderPayload=null; paymentConfirmModal.style.display='none'; });
+confirmPaymentBtn.addEventListener('click', ()=>{
+  // final validation: ensure payment details input (if required) is correct length
+  const paymentMethod = pendingOrderPayload?.payment || document.getElementById('custPayment').value;
+  if(paymentMethod === 'Gcash'){
+    const el = document.getElementById('gcashNumber');
+    if(!el){ alert('Please enter payment details.'); return; }
+    if(el.value.replace(/\D/g,'').length !== 11){ alert('Please enter a valid 11-digit GCash number.'); return; }
+  } else if(paymentMethod === 'Bank'){
+    const bankEl = document.getElementById('bankName');
+    const accEl = document.getElementById('bankAccountNumber');
+    if(!bankEl || !accEl){ alert('Please select your bank and enter account number.'); return; }
+    const bank = bankEl.value;
+    const lenReq = bank === 'BPI' ? 10 : bank === 'BDO' ? 12 : bank === 'Metrobank' ? 13 : null;
+    const digits = accEl.value.replace(/\D/g,'');
+    if(!lenReq || digits.length !== lenReq){ alert(`Please enter a valid ${lenReq}-digit account number for ${bank}.`); return; }
+  }
+  // proceed
+  if(pendingOrderPayload) finalizeOrder(pendingOrderPayload);
+  pendingOrderPayload = null;
+  paymentConfirmModal.style.display='none';
+});
 
+/* ---------- Place order request (shows confirmation modal first) ---------- */
 function placeOrderRequest(){
   const name = document.getElementById('custName').value.trim();
   const address = document.getElementById('custAddress').value.trim();
@@ -377,217 +335,245 @@ function placeOrderRequest(){
   const fee = PAYMENT_FEES[payment] || 0;
   const total = subtotal + fee;
   const etaFrom = daysFromNow(ETA_MIN_DAYS), etaTo = daysFromNow(ETA_MAX_DAYS);
+  // show confirm modal
   openPaymentConfirmation({ name, address, payment, items: itemsCopy, subtotal, fee, total, etaFrom, etaTo });
 }
 document.getElementById('placeOrderBtn').addEventListener('click', placeOrderRequest);
 
+/* ---------- Finalize order after confirmation ---------- */
 function finalizeOrder(payload){
-  const id = generateOrderId();
-  const date = new Date().toLocaleString();
+  const id = generateOrderId(), date = new Date().toLocaleString();
   const order = { id, items: payload.items, subtotal: payload.subtotal, fee: payload.fee, total: payload.total, payment: payload.payment, status: (payload.payment==='COD'?'Pending':'Processing'), progress: (payload.payment==='COD'?0:5), etaFrom: payload.etaFrom, etaTo: payload.etaTo, _trackingInterval:null, cancelledAt:null, placedAt:date };
-  orders.unshift(order);
-  renderOrders();
+  orders.unshift(order); renderOrders();
   document.getElementById('receiptMeta').innerText = `Order #${id} · ${date} · ${payload.payment}`;
   document.getElementById('rName').innerText = payload.name;
   document.getElementById('rAddress').innerText = payload.address;
-  receiptItems.innerHTML = '';
-  payload.items.forEach(it=>{ const row=document.createElement('tr'); row.innerHTML=`<td style="text-align:left">${it.name} x ${it.qty}</td><td style="text-align:right">₱${it.price*it.qty}</td>`; receiptItems.appendChild(row); });
+  receiptItems.innerHTML=''; payload.items.forEach(it=>{ const row=document.createElement('tr'); row.innerHTML=`<td style="text-align:left">${it.name} x ${it.qty}</td><td style="text-align:right">₱${it.price*it.qty}</td>`; receiptItems.appendChild(row); });
   receiptTotal.innerHTML = `<div class="small">Subtotal: ₱${payload.subtotal}</div><div class="small">Payment fee: ₱${payload.fee}</div><div class="total">Total: ₱${payload.total}</div><div class="small">Estimated Delivery: ${formatETA(payload.etaFrom,payload.etaTo)}</div>`;
   document.getElementById('receiptFeeNote').innerText = payload.fee>0 ? `Note: Payment fee of ₱${payload.fee} is a processing charge and is non-refundable if you cancel the order.` : '';
-  document.getElementById('receiptModal').style.display = 'flex';
+  document.getElementById('receiptModal').style.display='flex';
   cart.length=0; renderCart();
   document.getElementById('custName').value=''; document.getElementById('custAddress').value=''; document.getElementById('custPayment').value=''; document.getElementById('paymentDetails').innerHTML='';
 }
 
-/* ---------- Orders rendering ---------- */
+/* ---------- Orders rendering & helpers ---------- */
 const orderHistoryBody = document.querySelector('#orderHistory tbody');
-function renderOrders(){
-  orderHistoryBody.innerHTML='';
-  orders.forEach((o,idx)=>{
-    const items = o.items.map(it=>`${it.name} x${it.qty}`).join(', ');
-    const progId = `prog-${o.id}`;
-    const actionParts = [];
-    if(o.status==='Pending') actionParts.push(`<button class="btn" onclick="markPaid(${idx})" style="padding:6px 8px;">Mark Paid</button>`);
-    actionParts.push(`<button class="btn" onclick="startTracking(${idx})" style="padding:6px 8px;background:#1976d2">Track Delivery</button>`);
-    if(isCancellable(o.status)) actionParts.push(`<button class="btn" onclick="cancelOrder(${idx})" style="padding:6px 8px;background:#f44336">Cancel</button>`);
-    else actionParts.push(`<button class="btn" disabled style="padding:6px 8px;background:#eee;color:#666;cursor:not-allowed">Cancel</button>`);
-    actionParts.push(`<button class="btn" onclick="openOrderDetails(${idx})" style="padding:6px 8px;background:#999">Details</button>`);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${o.id}</td>
-      <td>${items}</td>
-      <td>₱${o.total} ${o.fee>0?`<div class="small">fee: ₱${o.fee}</div>`:''}</td>
-      <td>${o.payment}</td>
-      <td>${statusTagHTML(o.status)}</td>
-      <td>${formatETA(o.etaFrom,o.etaTo)}</td>
-      <td><div class="progress-wrap" title="${Math.round(o.progress||0)}%"><div id="${progId}" class="progress-bar" style="width:${o.progress||0}%"></div></div></td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap">${actionParts.join('')}</td>
-    `;
-    orderHistoryBody.appendChild(tr);
-  });
-}
-function statusTagHTML(status){
-  if(status==='Pending') return `<span class="status-tag status-pending">Pending</span>`;
-  if(status==='Processing') return `<span class="status-tag status-processing">Processing</span>`;
-  if(status==='Out for Delivery') return `<span class="status-tag status-out">Out for Delivery</span>`;
-  if(status==='Delivered') return `<span class="status-tag status-delivered">Delivered</span>`;
-  if(status==='Cancelled') return `<span class="status-tag status-cancelled">Cancelled</span>`;
-  return `<span class="status-tag">${status}</span>`;
-}
+function renderOrders(){ orderHistoryBody.innerHTML=''; orders.forEach((o,idx)=>{ const items=o.items.map(it=>`${it.name} x${it.qty}`).join(', '); const progId=`prog-${o.id}`; const actionParts=[]; if(o.status==='Pending') actionParts.push(`<button class="btn" onclick="markPaid(${idx})" style="padding:6px 8px;">Mark Paid</button>`); actionParts.push(`<button class="btn" onclick="startTracking(${idx})" style="padding:6px 8px;background:#1976d2">Track Delivery</button>`); if(isCancellable(o.status)) actionParts.push(`<button class="btn" onclick="cancelOrder(${idx})" style="padding:6px 8px;background:#f44336">Cancel</button>`); else actionParts.push(`<button class="btn" disabled style="padding:6px 8px;background:#eee;color:#666;cursor:not-allowed">Cancel</button>`); actionParts.push(`<button class="btn" onclick="openOrderDetails(${idx})" style="padding:6px 8px;background:#999">Details</button>`); const tr=document.createElement('tr'); tr.innerHTML = `<td>${o.id}</td><td>${items}</td><td>₱${o.total} ${o.fee>0?`<div class="small">fee: ₱${o.fee}</div>`:''}</td><td>${o.payment}</td><td>${statusTagHTML(o.status)}</td><td>${formatETA(o.etaFrom,o.etaTo)}</td><td><div class="progress-wrap" title="${Math.round(o.progress||0)}%"><div id="${progId}" class="progress-bar" style="width:${o.progress||0}%"></div></div></td><td style="display:flex;gap:6px;flex-wrap:wrap">${actionParts.join('')}</td>`; orderHistoryBody.appendChild(tr); }); }
+function statusTagHTML(status){ if(status==='Pending') return `<span class="status-tag status-pending">Pending</span>`; if(status==='Processing') return `<span class="status-tag status-processing">Processing</span>`; if(status==='Out for Delivery') return `<span class="status-tag status-out">Out for Delivery</span>`; if(status==='Delivered') return `<span class="status-tag status-delivered">Delivered</span>`; if(status==='Cancelled') return `<span class="status-tag status-cancelled">Cancelled</span>`; return `<span class="status-tag">${status}</span>`; }
 function isCancellable(status){ return (status==='Pending' || status==='Processing'); }
 
-/* ---------- Mark paid / Cancel / Details ---------- */
-function markPaid(index){ const o=orders[index]; if(!o) return; if(o.status!=='Pending'){ alert('Order cannot be marked paid at this time.'); return; } o.status='Processing'; o.progress=5; renderOrders(); addAIMessage(`EcoAssist: Order ${o.id} marked as Paid — processing has started.`); }
-function cancelOrder(index){ const o=orders[index]; if(!o) return; if(!isCancellable(o.status)){ alert('This order cannot be cancelled.'); return; } if(!confirm(`Cancel order ${o.id}? Note: payment fee of ₱${o.fee} (if any) is non-refundable.`)) return; if(o._trackingInterval){ clearInterval(o._trackingInterval); o._trackingInterval=null; } o.status='Cancelled'; o.progress=0; o.cancelledAt=new Date().toLocaleString(); renderOrders(); addAIMessage(`EcoAssist: Order ${o.id} has been cancelled. Payment fee of ₱${o.fee} is non-refundable and will be retained.`); }
-function openOrderDetails(index){ const o=orders[index]; if(!o)return; document.getElementById('receiptModal').style.display='flex'; document.getElementById('receiptMeta').innerText=`Order #${o.id} · ${o.placedAt} · ${o.payment}`; document.getElementById('rName').innerText='(Order details)'; document.getElementById('rAddress').innerText=''; receiptItems.innerHTML=''; o.items.forEach(it=>{ const r=document.createElement('tr'); r.innerHTML=`<td>${it.name} x${it.qty}</td><td style="text-align:right">₱${it.price*it.qty}</td>`; receiptItems.appendChild(r); }); receiptTotal.innerHTML=`<div class="small">Subtotal: ₱${o.subtotal}</div><div class="small">Processing fee: ₱${o.fee}</div><div class="total">Total: ₱${o.total}</div><div class="small">Estimated Delivery: ${formatETA(o.etaFrom,o.etaTo)}</div>${o.cancelledAt?`<div class="small" style="color:#8a1f1f">Cancelled at: ${o.cancelledAt}</div>`:''}`; document.getElementById('receiptFeeNote').innerText=o.fee>0?`Note: Payment fee of ₱${o.fee} is non-refundable if you cancel.`:''; document.getElementById('refundOrderId').value=o.id; }
-
-/* ---------- Tracking ---------- */
-function startTracking(index){
-  const order = orders[index];
-  if(!order) return; if(order.status==='Delivered'){ alert('Order already delivered.'); return; } if(order.status==='Cancelled'){ alert('Order was cancelled.'); return; }
-  if(order.payment==='COD' && order.status==='Pending'){ if(!confirm('This order is COD and still Pending. Mark it as Paid now to start tracking?')) return; markPaid(index); }
-  addAIMessage(`EcoAssist: Tracking started for order ${order.id}.`);
-  const steps = [{status:'Processing',target:30},{status:'Out for Delivery',target:80},{status:'Delivered',target:100}];
-  let step=0;
-  if(order._trackingInterval) clearInterval(order._trackingInterval);
-  order._trackingInterval = setInterval(()=>{
-    if(order.status==='Cancelled'){ clearInterval(order._trackingInterval); order._trackingInterval=null; renderOrders(); return; }
-    const currentStep = steps[step]; const increment=6;
-    order.progress = Math.min((order.progress||0)+increment, currentStep.target);
-    const bar = document.getElementById(`prog-${order.id}`); if(bar) bar.style.width = order.progress + '%';
-    if(order.progress >= currentStep.target){
-      order.status = currentStep.status; renderOrders(); addAIMessage(`EcoAssist: Order ${order.id} is now ${order.status}.`); step++;
-      if(step>=steps.length){ if(order._trackingInterval){ clearInterval(order._trackingInterval); order._trackingInterval=null; } }
-    }
-  },1800);
-}
+/* ---------- markPaid, cancelOrder, details, tracking ---------- */
+function markPaid(index){ const o=orders[index]; if(!o) return; if(o.status!=='Pending'){ alert('Order cannot be marked paid at this time.'); return;} o.status='Processing'; o.progress=5; renderOrders(); addAIMessage(`EcoAssist: Order ${o.id} marked as Paid — processing has started.`); }
+function cancelOrder(index){ const o=orders[index]; if(!o) return; if(!isCancellable(o.status)){ alert('This order cannot be cancelled.'); return;} if(!confirm(`Cancel order ${o.id}? Note: payment fee of ₱${o.fee} (if any) is non-refundable.`)) return; if(o._trackingInterval){ clearInterval(o._trackingInterval); o._trackingInterval=null; } o.status='Cancelled'; o.progress=0; o.cancelledAt=new Date().toLocaleString(); renderOrders(); addAIMessage(`EcoAssist: Order ${o.id} has been cancelled. Payment fee of ₱${o.fee} is non-refundable and will be retained.`); }
+function openOrderDetails(index){ const o=orders[index]; if(!o) return; document.getElementById('receiptModal').style.display='flex'; document.getElementById('receiptMeta').innerText=`Order #${o.id} · ${o.placedAt} · ${o.payment}`; document.getElementById('rName').innerText='(Order details)'; document.getElementById('rAddress').innerText=''; receiptItems.innerHTML=''; o.items.forEach(it=>{ const r=document.createElement('tr'); r.innerHTML=`<td>${it.name} x${it.qty}</td><td style="text-align:right">₱${it.price*it.qty}</td>`; receiptItems.appendChild(r); }); receiptTotal.innerHTML=`<div class="small">Subtotal: ₱${o.subtotal}</div><div class="small">Processing fee: ₱${o.fee}</div><div class="total">Total: ₱${o.total}</div><div class="small">Estimated Delivery: ${formatETA(o.etaFrom,o.etaTo)}</div>${o.cancelledAt?`<div class="small" style="color:#8a1f1f">Cancelled at: ${o.cancelledAt}</div>`:''}`; document.getElementById('refundOrderId').value = o.id; }
+function startTracking(index){ const order = orders[index]; if(!order) return; if(order.status==='Delivered'){ alert('Order already delivered.'); return; } if(order.status==='Cancelled'){ alert('Order was cancelled.'); return; } if(order.payment==='COD' && order.status==='Pending'){ if(!confirm('This order is COD and still Pending. Mark it as Paid now to start tracking?')) return; markPaid(index); } addAIMessage(`EcoAssist: Tracking started for order ${order.id}.`); const steps=[{status:'Processing',target:30},{status:'Out for Delivery',target:80},{status:'Delivered',target:100}]; let step=0; if(order._trackingInterval) clearInterval(order._trackingInterval); order._trackingInterval = setInterval(()=>{ if(order.status==='Cancelled'){ clearInterval(order._trackingInterval); order._trackingInterval=null; renderOrders(); return; } const currentStep = steps[step]; const increment=6; order.progress = Math.min((order.progress||0)+increment, currentStep.target); const bar = document.getElementById(`prog-${order.id}`); if(bar) bar.style.width = order.progress + '%'; if(order.progress >= currentStep.target){ order.status = currentStep.status; renderOrders(); addAIMessage(`EcoAssist: Order ${order.id} is now ${order.status}.`); step++; if(step>=steps.length){ if(order._trackingInterval){ clearInterval(order._trackingInterval); order._trackingInterval=null; } } } }, 1800); }
 
 /* ---------- Refund ---------- */
-document.getElementById('refundBtn').addEventListener('click', ()=>{
-  const id=document.getElementById('refundOrderId').value.trim(), reason=document.getElementById('refundReason').value.trim(), method=document.getElementById('refundMethod').value;
-  if(!id||!reason||!method){ alert('Please provide Order ID, reason, and refund method.'); return; }
-  document.getElementById('refundConfirm').style.display='block';
-  addAIMessage(`EcoAssist: Refund request for ${id} received (method: ${method}). Note: payment processing fees (if any) are non-refundable for cancelled orders.`);
-  document.getElementById('refundOrderId').value=''; document.getElementById('refundReason').value=''; document.getElementById('refundMethod').value='';
-  setTimeout(()=>{ document.getElementById('refundConfirm').style.display='none'; },4000);
-});
+document.getElementById('refundBtn').addEventListener('click', ()=>{ const id=document.getElementById('refundOrderId').value.trim(), reason=document.getElementById('refundReason').value.trim(), method=document.getElementById('refundMethod').value; if(!id||!reason||!method){ alert('Please provide Order ID, reason, and refund method.'); return; } document.getElementById('refundConfirm').style.display='block'; addAIMessage(`EcoAssist: Refund request for ${id} received (method: ${method}). Note: payment processing fees (if any) are non-refundable for cancelled orders.`); document.getElementById('refundOrderId').value=''; document.getElementById('refundReason').value=''; document.getElementById('refundMethod').value=''; setTimeout(()=>{ document.getElementById('refundConfirm').style.display='none'; },4000); });
 
-/* ---------- Payment option fields ---------- */
-const custPaymentEl = document.getElementById('custPayment');
-custPaymentEl.addEventListener('change', ()=>{
-  const choice = custPaymentEl.value; const paymentDetails = document.getElementById('paymentDetails');
-  paymentDetails.innerHTML='';
-  if(choice==='Gcash'){ paymentDetails.innerHTML = `<div class="small">Processing fee: ₱${PAYMENT_FEES['Gcash']} (non-refundable on cancel)</div><label class="small">GCash number</label><input id="gcashNumber" placeholder="09XXXXXXXXX">`; }
-  else if(choice==='Bank'){ paymentDetails.innerHTML = `<div class="small">Processing fee: ₱${PAYMENT_FEES['Bank']} (non-refundable on cancel)</div><label class="small">Bank</label><select id="bankName"><option value="">Select bank</option><option>BDO</option><option>BPI</option><option>Metrobank</option></select><label class="small" style="margin-top:8px;display:block">Account no.</label><input id="bankAccountNumber" placeholder="Account number">`; }
-  else if(choice==='COD'){ paymentDetails.innerHTML = `<div class="small">No processing fee for COD.</div>`; }
-});
+/* ---------- Validation for payment number input ---------- */
+/* Rules requested:
+   - GCash only allow 11 digits
+   - BPI allow 10 digits
+   - BDO allow 12 digits
+   - Metrobank allow 13 digits
+   Implemented: live restriction, only digits, warning message, and final confirm check.
+*/
+function setupPaymentInputs(){
+  // Called whenever paymentDetails innerHTML is updated. Attach listeners if inputs exist.
+  // GCash input
+  const gcash = document.getElementById('gcashNumber');
+  if(gcash){
+    const required = 11;
+    attachDigitEnforcer(gcash, required, `Enter exactly ${required} digits for GCash`);
+  }
+  // Bank inputs: bankName select and bankAccountNumber
+  const bankName = document.getElementById('bankName');
+  const bankAcc = document.getElementById('bankAccountNumber');
+  if(bankName && bankAcc){
+    function updateBankRules(){
+      const b = bankName.value;
+      const len = b === 'BPI' ? 10 : b === 'BDO' ? 12 : b === 'Metrobank' ? 13 : null;
+      bankAcc.placeholder = len ? `Enter ${len}-digit account number` : 'Account number';
+      // re-attach
+      attachDigitEnforcer(bankAcc, len, len ? `Enter exactly ${len} digits for ${b}` : 'Enter account number');
+    }
+    bankName.addEventListener('change', updateBankRules);
+    updateBankRules();
+  }
+}
 
-/* ---------- AI Assistant with product suggestions ---------- */
-const chatFab = document.getElementById('chatFab'), chatPanel = document.getElementById('chatPanel'), chatBody = document.getElementById('chatBody'), chatInput = document.getElementById('chatInput'), chatSend = document.getElementById('chatSend');
-chatFab.addEventListener('click', ()=>{ chatPanel.style.display='flex'; chatInput.focus(); });
-document.getElementById('closeChat').addEventListener('click', ()=>{ chatPanel.style.display='none'; });
+function attachDigitEnforcer(inputEl, requiredLen, warningText){
+  // create or find warning span
+  let warn = inputEl.parentElement.querySelector('.input-warning');
+  if(!warn){
+    warn = document.createElement('div'); warn.className='input-warning'; inputEl.parentElement.appendChild(warn);
+  }
+  warn.style.display = 'none';
+  // ensure only digits allowed and block extra
+  inputEl.addEventListener('input', ()=> {
+    let digits = inputEl.value.replace(/\D/g,'');
+    if(requiredLen) digits = digits.slice(0, requiredLen);
+    const prev = inputEl.value;
+    inputEl.value = digits;
+    if(requiredLen){
+      if(digits.length !== requiredLen){
+        warn.textContent = `⚠ ${warningText}`;
+        warn.style.display = 'block';
+      } else { warn.style.display = 'none'; }
+    } else {
+      // no fixed requirement; hide
+      warn.style.display = 'none';
+    }
+  });
+  // also prevent pasting non-digits or too long
+  inputEl.addEventListener('paste', (e)=>{
+    const paste = (e.clipboardData || window.clipboardData).getData('text') || '';
+    const digits = paste.replace(/\D/g,'');
+    if(requiredLen && digits.length > requiredLen){
+      e.preventDefault();
+      // paste only allowed portion
+      const allowed = digits.slice(0, requiredLen);
+      inputEl.value = allowed;
+      const warn = inputEl.parentElement.querySelector('.input-warning');
+      if(warn){ warn.textContent = `⚠ ${warningText}`; warn.style.display = allowed.length === requiredLen ? 'none' : 'block'; }
+    }
+  });
+}
+
+/* ---------- AI Assistant (product suggestions included) ---------- */
+const chatBody = document.getElementById('chatBody'), chatInput = document.getElementById('chatInput'), chatSendBtn = document.getElementById('chatSend');
+document.getElementById('chatFab').addEventListener('click', ()=>{ document.getElementById('chatPanel').style.display='flex'; chatInput.focus(); });
+document.getElementById('closeChat').addEventListener('click', ()=>{ document.getElementById('chatPanel').style.display='none'; });
 
 function appendChatBubble(role, text){
   const div=document.createElement('div'); div.className='bubble '+(role==='user'?'user':'ai'); div.textContent=text; chatBody.appendChild(div); chatBody.scrollTop=chatBody.scrollHeight;
 }
 function appendChatHTML(role, html){
-  const div=document.createElement('div'); div.className='bubble '+(role==='user'?'user':'ai'); div.innerHTML = html; chatBody.appendChild(div); chatBody.scrollTop=chatBody.scrollHeight;
+  const div=document.createElement('div'); div.className='bubble '+(role==='user'?'user':'ai'); div.innerHTML=html; chatBody.appendChild(div); chatBody.scrollTop=chatBody.scrollHeight;
 }
-
-// helper: add product suggestion card inside chat (with Add to Cart button)
 function addAIProductSuggestion(productName){
-  // find product element to get image, price, desc
   const prodEl = Array.from(document.querySelectorAll('.product')).find(p => p.dataset.name === productName);
-  if(!prodEl){
-    appendChatBubble('ai', `I recommend ${productName}. (Product not found in catalog.)`);
-    return;
-  }
+  if(!prodEl){ appendChatBubble('ai', `I recommend ${productName}.`); return; }
   const img = prodEl.querySelector('img')?.src || '';
   const price = prodEl.dataset.price || prodEl.querySelector('.price')?.innerText || '';
   const desc = prodEl.dataset.desc || prodEl.querySelector('p')?.innerText || '';
-  const card = document.createElement('div');
-  card.className = 'chat-card';
-  card.innerHTML = `
-    <img src="${img}" alt="${productName}">
-    <div class="info">
-      <div style="font-weight:700">${productName}</div>
-      <div class="small">${desc}</div>
-      <div style="margin-top:6px;font-weight:700">₱${price}</div>
-      <div style="margin-top:8px"><button class="btn" onclick="addToCart('${productName}', ${Number(price)})">Add to Cart</button></div>
-    </div>
-  `;
-  const wrapper = document.createElement('div');
-  wrapper.appendChild(card);
-  chatBody.appendChild(wrapper);
-  chatBody.scrollTop = chatBody.scrollHeight;
+  const html = `<div class="chat-card"><img src="${img}" alt="${productName}"><div class="info"><div style="font-weight:700">${productName}</div><div class="small">${desc}</div><div style="margin-top:6px;font-weight:700">₱${price}</div><div style="margin-top:8px"><button class="btn" onclick="addToCart('${productName}', ${Number(price)})">Add to Cart</button></div></div></div>`;
+  appendChatHTML('ai', html);
 }
-
-// AI reply logic with suggestions
-function aiReply(text){
+function aiReplyAndSuggest(text){
   const t = text.toLowerCase();
-  // product suggestions
-  if(t.includes('crack') || t.includes('seal') || t.includes('repair') && t.includes('wall')){
-    appendChatBubble('ai', 'For wall cracks and sealing I recommend Fly Ash Concrete — sustainable and strong. Here’s a quick product card:');
-    addAIProductSuggestion('Fly Ash Concrete');
-    return;
-  }
-  if(t.includes('bamboo') || t.includes('wood') || t.includes('reinforcement')){
-    appendChatBubble('ai', 'For renewable reinforcement you can use Bamboo Reinforcement. Quick look:');
-    addAIProductSuggestion('Bamboo Reinforcement');
-    return;
-  }
-  if(t.includes('insul') || t.includes('insulation') || t.includes('warm') || t.includes('hot')){
-    appendChatBubble('ai', 'Coconut Fiber Board is great for insulation and finishing — check it out:');
-    addAIProductSuggestion('Coconut Fiber Board');
-    return;
-  }
-  if(t.includes('aggregate') || t.includes('base') || t.includes('fill')){
-    appendChatBubble('ai', 'Recycled Aggregates are ideal for base layers and general fill:');
-    addAIProductSuggestion('Recycled Aggregates');
-    return;
-  }
-
-  // other intents
-  if(t.includes('price') || t.includes('cost')) return 'Prices: Bamboo ₱250, Coconut Fiber Board ₱300, Fly Ash Concrete ₱220, Recycled Aggregates ₱180. Payment fees: GCash ₱10, Bank ₱20, COD ₱0.';
-  if(t.includes('refund')) return 'Refunds: use the Refund section. Payment processing fees are non-refundable if the order is cancelled.';
-  if(t.includes('track') || t.includes('status')) return 'Open Order History and click "Track Delivery" for live progress updates; ETA appears in the ETA column.';
-  if(t.includes('eta') || t.includes('delivery')) return 'ETA is shown on the receipt and Order History (typically 3–5 days after order).';
-  if(t.includes('confirm') || t.includes('payment')) return 'After clicking Place Order you will see a confirmation popup summarizing total (including fees). Confirm to finalize payment.';
-  if(t.includes('rating') || t.includes('rate')) return 'Mock community ratings appear under the product name; you can add your personal rating with the stars.';
-  if(t.includes('cancel')) return 'To cancel an order, go to Order History and click Cancel on orders marked Pending or Processing. Fees may be non-refundable.';
-  if(t.includes('order')) return 'Place your order using Checkout — receipts with Order ID, ETA and fee details appear after confirmation.';
-  if(t.includes('hello') || t.includes('hi')) return "Hi! I'm EcoAssist — I can help with product info, fees, ratings, and order tracking.";
-  return 'I can help with product info, orders, fees, ETA, ratings, and refunds — try "repair", "insulation", "bamboo", "track my order", or ask about fees.';
+  if(t.includes('crack') || t.includes('seal') || (t.includes('wall') && t.includes('repair'))){ appendChatBubble('ai','For wall cracks and sealing I recommend Fly Ash Concrete — sustainable and strong. Here’s a quick product card:'); addAIProductSuggestion('Fly Ash Concrete'); return; }
+  if(t.includes('bamboo') || t.includes('wood') || t.includes('reinforcement')){ appendChatBubble('ai','For renewable reinforcement you can use Bamboo Reinforcement. Quick look:'); addAIProductSuggestion('Bamboo Reinforcement'); return; }
+  if(t.includes('insul') || t.includes('insulation') || t.includes('warm') || t.includes('hot')){ appendChatBubble('ai','Coconut Fiber Board is great for insulation and finishing — check it out:'); addAIProductSuggestion('Coconut Fiber Board'); return; }
+  if(t.includes('aggregate') || t.includes('base') || t.includes('fill')){ appendChatBubble('ai','Recycled Aggregates are ideal for sub-base layers and general fill:'); addAIProductSuggestion('Recycled Aggregates'); return; }
+  // fallbacks
+  if(t.includes('price')||t.includes('cost')) appendChatBubble('ai','Prices: Bamboo ₱250, Coconut Fiber Board ₱300, Fly Ash Concrete ₱220, Recycled Aggregates ₱180. Payment fees: GCash ₱10, Bank ₱20, COD ₱0.');
+  else if(t.includes('refund')) appendChatBubble('ai','Refunds: use the Refund section. Payment processing fees are non-refundable if the order is cancelled.');
+  else if(t.includes('track')||t.includes('status')) appendChatBubble('ai','Open Order History and click "Track Delivery" for live progress updates; ETA appears in the ETA column.');
+  else if(t.includes('eta')||t.includes('delivery')) appendChatBubble('ai','ETA is shown on the receipt and Order History (typically 3–5 days after order).');
+  else if(t.includes('confirm')||t.includes('payment')) appendChatBubble('ai','After clicking Place Order you will see a confirmation popup summarizing total (including fees). Confirm to finalize payment.');
+  else if(t.includes('rating')||t.includes('rate')) appendChatBubble('ai','Mock community ratings appear under the product name; you can add your personal rating with the stars.');
+  else if(t.includes('cancel')) appendChatBubble('ai','To cancel an order, go to Order History and click Cancel on orders marked Pending or Processing. Fees may be non-refundable.');
+  else if(t.includes('order')) appendChatBubble('ai','Place your order using Checkout — receipts with Order ID, ETA and fee details appear after confirmation.');
+  else if(t.includes('hello')||t.includes('hi')) appendChatBubble('ai',"Hi! I'm EcoAssist — I can help with product info, fees, ratings, and order tracking.");
+  else appendChatBubble('ai','I can help with product info, orders, fees, ETA, ratings, and refunds — try "repair", "insulation", "bamboo", "track my order", or ask about fees.');
 }
+chatSend.addEventListener('click', ()=>{ const txt = chatInput.value.trim(); if(!txt) return; appendChatBubble('user', txt); chatInput.value=''; const typing=document.createElement('div'); typing.id='typingDots'; typing.innerHTML='<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>'; chatBody.appendChild(typing); chatBody.scrollTop=chatBody.scrollHeight; setTimeout(()=>{ const dots=document.getElementById('typingDots'); if(dots) dots.remove(); aiReplyAndSuggest(txt); },700); });
 
-// ensure single reply per send
-let chatLocked = false;
-chatSend.addEventListener('click', ()=>{
-  if(chatLocked) return;
-  const txt = chatInput.value.trim();
-  if(!txt) return;
-  appendChatBubble('user', txt);
-  chatInput.value='';
-  chatLocked=true;
-  // typing
-  const typing=document.createElement('div'); typing.id='typingDots'; typing.innerHTML='<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
-  chatBody.appendChild(typing); chatBody.scrollTop=chatBody.scrollHeight;
-  setTimeout(()=>{ const reply = aiReply(txt); const dots=document.getElementById('typingDots'); if(dots) dots.remove(); if(reply) appendChatBubble('ai', reply); chatLocked=false; },700);
-});
-
-// initial greeting
-setTimeout(()=> appendChatBubble('ai', "Hello! I'm EcoAssist — I can help with product info, cart help, suggestions, and order tracking."),600);
-
-/* ---------- Utilities ---------- */
-function addAIMessage(text){ chatPanel.style.display='flex'; appendChatBubble('ai', text); }
-
-/* ---------- Print / close receipt ---------- */
+/* ---------- Misc: Print / close receipt ---------- */
 function closeReceipt(){ document.getElementById('receiptModal').style.display='none'; }
 function printReceipt(){ const content=document.getElementById('receiptContent').innerHTML; const w=window.open('','_blank','width=600,height=700'); w.document.write(`<html><head><title>Receipt</title></head><body>${content}</body></html>`); w.document.close(); w.focus(); setTimeout(()=>w.print(),300); }
 
-/* ---------- Initialize ---------- */
-function initAll(){ renderCart(); renderOrders(); renderMockRatings(); initUserRatings(); }
+/* ---------- Init UI rendering ---------- */
+function initAll(){ renderCart(); renderOrders(); renderMockRatings(); initUserRatings(); setupPaymentFieldObserver(); }
 initAll();
+
+/* ---------- Payment fields dynamic injection observer & validation setup ---------- */
+// We need to wire up validation whenever paymentDetails content changes (because we inject different inputs)
+// Add a MutationObserver on paymentDetails to run setupPaymentInputs() and attach validators to newly created inputs
+function setupPaymentFieldObserver(){
+  const paymentDetailsEl = document.getElementById('paymentDetails');
+  // on change of the select, we will set innerHTML accordingly (existing code uses change event)
+  document.getElementById('custPayment').addEventListener('change', (e)=>{
+    const choice = e.target.value;
+    paymentDetailsEl.innerHTML = '';
+    if(choice === 'Gcash'){
+      paymentDetailsEl.innerHTML = `<div class="small">Processing fee: ₱${PAYMENT_FEES['Gcash']} (non-refundable on cancel)</div>
+        <label class="small">Enter payment details</label>
+        <input id="gcashNumber" placeholder="Enter 11-digit GCash number">`;
+      // attach validator
+      setTimeout(()=> attachDigitEnforcer(document.getElementById('gcashNumber'), 11, 'Enter exactly 11 digits for GCash'), 0);
+    } else if(choice === 'Bank'){
+      paymentDetailsEl.innerHTML = `<div class="small">Processing fee: ₱${PAYMENT_FEES['Bank']} (non-refundable on cancel)</div>
+        <label class="small">Select Bank</label>
+        <select id="bankName" style="width:100%;padding:10px;border-radius:10px;border:1px solid #d9d9d9;margin-top:8px">
+          <option value="">-- Choose Bank --</option>
+          <option value="BDO">BDO</option>
+          <option value="BPI">BPI</option>
+          <option value="Metrobank">Metrobank</option>
+        </select>
+        <label class="small" style="margin-top:10px;display:block;"><b>Enter Account Number:</b></label>
+        <input id="bankAccountNumber" placeholder="Enter account number" style="width:100%;padding:10px;border-radius:10px;border:1px solid #d9d9d9;margin-top:8px">`;
+      // attach listeners to bank name and account after short delay to ensure elements exist
+      setTimeout(()=>{
+        const bankName = document.getElementById('bankName');
+        const bankAcc = document.getElementById('bankAccountNumber');
+        function updateBankRules(){
+          const b = bankName.value;
+          const len = b === 'BPI' ? 10 : b === 'BDO' ? 12 : b === 'Metrobank' ? 13 : null;
+          bankAcc.placeholder = len ? `Enter ${len}-digit account number` : 'Enter account number';
+          attachDigitEnforcer(bankAcc, len, len ? `Enter exactly ${len} digits for ${b}` : 'Enter account number');
+        }
+        bankName.addEventListener('change', updateBankRules);
+        updateBankRules();
+      }, 0);
+    } else if(choice === 'COD'){
+      paymentDetailsEl.innerHTML = `<div class="small">No processing fee for COD.</div>`;
+    } else {
+      paymentDetailsEl.innerHTML = '';
+    }
+  });
+}
+
+/* ---------- attachDigitEnforcer utility (global) ---------- */
+function attachDigitEnforcer(inputEl, requiredLen, warningText){
+  if(!inputEl) return;
+  // remove existing listener by cloning if desired to avoid duplicates
+  const newInput = inputEl.cloneNode(true);
+  inputEl.parentElement.replaceChild(newInput, inputEl);
+  inputEl = newInput;
+  let warn = inputEl.parentElement.querySelector('.input-warning');
+  if(!warn){ warn = document.createElement('div'); warn.className='input-warning'; inputEl.parentElement.appendChild(warn); }
+  warn.style.display = 'none';
+  inputEl.addEventListener('input', ()=>{
+    let digits = inputEl.value.replace(/\D/g,'');
+    if(requiredLen) digits = digits.slice(0, requiredLen);
+    inputEl.value = digits;
+    if(requiredLen){
+      if(digits.length !== requiredLen){ warn.textContent = `⚠ ${warningText}`; warn.style.display = 'block'; }
+      else { warn.style.display = 'none'; }
+    } else { warn.style.display = 'none'; }
+  });
+  inputEl.addEventListener('paste', (e)=>{
+    const paste = (e.clipboardData||window.clipboardData).getData('text')||'';
+    const digits = paste.replace(/\D/g,'');
+    if(requiredLen && digits.length > requiredLen){
+      e.preventDefault();
+      const allowed = digits.slice(0, requiredLen);
+      inputEl.value = allowed;
+      warn.textContent = `⚠ ${warningText}`; warn.style.display = allowed.length===requiredLen ? 'none' : 'block';
+    }
+  });
+}
+
+/* ---------- Utility: AI messages ---------- */
+function addAIMessage(text){ document.getElementById('chatPanel').style.display = 'flex'; const div=document.createElement('div'); div.className='bubble ai'; div.textContent=text; document.getElementById('chatBody').appendChild(div); document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight; }
+
+/* ---------- Misc print / close ---------- */
+function closeReceipt(){ document.getElementById('receiptModal').style.display='none'; }
+function printReceipt(){ const content=document.getElementById('receiptContent').innerHTML; const w=window.open('','_blank','width=600,height=700'); w.document.write(`<html><head><title>Receipt</title></head><body>${content}</body></html>`); w.document.close(); w.focus(); setTimeout(()=>w.print(),300); }
+
 </script>
 </body>
 </html>
