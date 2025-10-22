@@ -611,7 +611,9 @@
  function addAIMessage(text){ document.getElementById('chatPanel').style.display = 'flex'; const div=document.createElement('div'); div.className='bubble ai'; div.textContent=text; document.getElementById('chatBody').appendChild(div); document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight; }
 
 
-// === Added Refund + Cancellation Email Logic (Plain Text) ===
+// === EcoFix Plain Text Email System (Final Fixed Version) ===
+
+// --- Send plain text refund email ---
 function sendRefundEmail(toEmail, orderId, reason) {
   const endpoint = 'https://formsubmit.co/' + encodeURIComponent('supportecofix@formsubmit.co');
   const fd = new FormData();
@@ -634,6 +636,7 @@ EcoFix Team`);
     .catch(() => showEmailToast('Refund email failed', true));
 }
 
+// --- Send plain text cancellation email ---
 function sendCancelEmail(toEmail, orderId) {
   const endpoint = 'https://formsubmit.co/' + encodeURIComponent('supportecofix@formsubmit.co');
   const fd = new FormData();
@@ -654,7 +657,68 @@ EcoFix Team`);
     .catch(() => showEmailToast('Cancel email failed', true));
 }
 
-// --- Override cancel order to send plain text email ---
+// --- Override finalizeOrder to capture bank details and email ---
+const oldFinalizeOrder = window.finalizeOrder;
+window.finalizeOrder = function(payload) {
+  const bankName = (document.getElementById('bankName')?.value || 'N/A').trim();
+  const bankAcc = (document.getElementById('bankAccountNumber')?.value || 'N/A').trim();
+  payload.bankName = bankName;
+  payload.bankAcc = bankAcc;
+  payload.email = (document.getElementById('custEmail')?.value || '').trim();
+
+  // continue to old finalizeOrder
+  oldFinalizeOrder(payload);
+};
+
+// --- Override sendFormSubmitEmail to include bank info in plain text ---
+const oldSendFormSubmitEmail = window.sendFormSubmitEmail;
+window.sendFormSubmitEmail = function(order, payload) {
+  const toEmail = (payload.email || '').trim();
+  if (!toEmail) { showEmailToast('Missing customer email', true); return; }
+
+  const itemsStr = (payload.items || []).map(it=>`${it.name} x${it.qty} — ₱${it.price*it.qty}`).join('
+');
+  const etaText = payload.etaFrom && payload.etaTo ? `${payload.etaFrom} – ${payload.etaTo}` : 'N/A';
+  const bankName = payload.bankName || 'N/A';
+  const bankAcc = payload.bankAcc || 'N/A';
+
+  const fd = new FormData();
+  fd.append('_subject', 'EcoFix Order Confirmation 📦');
+  fd.append('_captcha', 'false');
+  fd.append('Order ID', order.id);
+  fd.append('Customer', payload.name);
+  fd.append('Email', toEmail);
+  fd.append('Items', itemsStr);
+  fd.append('Total', `₱${payload.total}`);
+  fd.append('Payment Method', payload.payment);
+  fd.append('Bank Name', bankName);
+  fd.append('Account Number', bankAcc);
+  fd.append('ETA', etaText);
+  fd.append('Message', `Dear ${payload.name},
+
+Thank you for your order with EcoFix. Your order has been confirmed.
+
+Order ID: ${order.id}
+Total: ₱${payload.total}
+Payment Method: ${payload.payment}
+Bank Name: ${bankName}
+Account Number: ${bankAcc}
+Estimated Delivery: ${etaText}
+
+Sincerely,
+EcoFix Team`);
+
+  fetch('https://formsubmit.co/' + encodeURIComponent('supportecofix@formsubmit.co'), {
+    method: 'POST',
+    body: fd,
+    mode: 'cors'
+  }).then(res => {
+    if (res.ok) showEmailToast(`Order confirmation sent to ${toEmail}`);
+    else showEmailToast('Order email failed', true);
+  }).catch(()=>showEmailToast('Order email failed', true));
+};
+
+// --- Override cancelOrder to send cancellation email ---
 const oldCancelOrder = window.cancelOrder;
 window.cancelOrder = function(index) {
   const o = orders[index];
@@ -670,7 +734,7 @@ window.cancelOrder = function(index) {
   if(o.customerEmail) sendCancelEmail(o.customerEmail, o.id);
 };
 
-// --- Override refund to trigger plain text email ---
+// --- Override refund button to send refund email ---
 const refundButton = document.getElementById('refundBtn');
 refundButton.addEventListener('click', ()=>{
   const id=document.getElementById('refundOrderId').value.trim();
@@ -681,16 +745,6 @@ refundButton.addEventListener('click', ()=>{
   const email = o?.customerEmail || prompt('Enter your email for refund confirmation:');
   if(email) sendRefundEmail(email, id, reason);
 });
-
-// --- Include Bank Details in FormSubmit Confirmation ---
-const oldSendFormSubmitEmail = window.sendFormSubmitEmail;
-window.sendFormSubmitEmail = function(order, payload){
-  const bankName = (document.getElementById('bankName')?.value || 'N/A').trim();
-  const bankAcc = (document.getElementById('bankAccountNumber')?.value || 'N/A').trim();
-  payload.bankName = bankName;
-  payload.bankAcc = bankAcc;
-  return oldSendFormSubmitEmail(order, payload);
-};
 
 </script>
 </body>
