@@ -376,14 +376,14 @@
    document.getElementById('receiptFeeNote').innerText = payload.fee>0 ? `Note: Payment fee of ₱${payload.fee} is a processing charge and is non-refundable if you cancel the order.` : '';
    document.getElementById('receiptModal').style.display='flex';
    cart.length=0; renderCart(); saveToStorage('ecofix_cart', cart);
-   document.getElementById('custName').value=''; document.getElementById('custAddress').value=''; document.getElementById('custPayment').value=''; document.getElementById('paymentDetails').innerHTML=''; document.getElementById('custEmail').value='';
-
-   // ===== Replace EmailJS: send confirmation via FormSubmit to customer's email =====
-   // We call sendFormSubmitEmail which submits a hidden form to FormSubmit (POST).
+      // ===== Replace EmailJS: send confirmation via FormSubmit to customer's email =====
+   // Send confirmation BEFORE clearing payment fields (so bank info is captured)
    sendFormSubmitEmail(order, payload).catch(err=>{
      console.warn('Email (FormSubmit) send error', err);
      addAIMessage('EcoAssist: Could not send confirmation email automatically.');
    });
+
+   document.getElementById('custName').value=''; document.getElementById('custAddress').value=''; document.getElementById('custPayment').value=''; document.getElementById('paymentDetails').innerHTML=''; document.getElementById('custEmail').value='';
  }
 
  /* ---------- FormSubmit integration (sends to customer's email) ---------- */
@@ -468,7 +468,34 @@
    });
  }
 
- /* ---------- Orders rendering & helpers (UNCHANGED) ---------- */
+ 
+
+// --- Plain-text Cancel & Refund email helpers (sends to customer email) ---
+function sendCancelEmail(toEmail, orderId){
+  if(!toEmail || !toEmail.includes('@')) return;
+  const endpoint = 'https://formsubmit.co/' + encodeURIComponent(toEmail);
+  const fd = new FormData();
+  fd.append('_subject','EcoFix Order Cancellation Notice ❌');
+  fd.append('_captcha','false');
+  fd.append('Order ID', orderId);
+  fd.append('Status','Cancelled');
+  fd.append('Message', `Dear customer,\n\nYour order ${orderId} has been successfully cancelled.\nIf payment was made, your refund will be processed and credited back to your account within 3–5 business days.\n\nSincerely,\nEcoFix Team`);
+  fetch(endpoint,{method:'POST',body:fd,mode:'cors'}).then(r=>{ if(r.ok) showEmailToast(`Cancellation email sent to ${toEmail}`); else showEmailToast('Cancellation email failed', true); }).catch(()=>showEmailToast('Cancellation email failed', true));
+}
+
+function sendRefundEmail(toEmail, orderId, reason){
+  if(!toEmail || !toEmail.includes('@')) return;
+  const endpoint = 'https://formsubmit.co/' + encodeURIComponent(toEmail);
+  const fd = new FormData();
+  fd.append('_subject','EcoFix Refund Confirmation 💸');
+  fd.append('_captcha','false');
+  fd.append('Order ID', orderId);
+  fd.append('Refund Status','Refund Processed');
+  fd.append('Message', `Dear customer,\n\nWe’ve processed your refund request for Order ${orderId}.\nYour amount will be credited to your account within 3–5 business days.\n\nReason for refund: ${reason}\n\nSincerely,\nEcoFix Team`);
+  fetch(endpoint,{method:'POST',body:fd,mode:'cors'}).then(r=>{ if(r.ok) showEmailToast(`Refund email sent to ${toEmail}`); else showEmailToast('Refund email failed', true); }).catch(()=>showEmailToast('Refund email failed', true));
+}
+
+/* ---------- Orders rendering & helpers (UNCHANGED) ---------- */
  const orderHistoryBody = document.querySelector('#orderHistory tbody');
  function renderOrders(){ orderHistoryBody.innerHTML=''; orders.forEach((o,idx)=>{ const items=o.items.map(it=>`${it.name} x${it.qty}`).join(', '); const progId=`prog-${o.id}`; const actionParts=[]; if(o.status==='Pending') actionParts.push(`<button class="btn" onclick="markPaid(${idx})" style="padding:6px 8px;">Mark Paid</button>`); actionParts.push(`<button class="btn" onclick="startTracking(${idx})" style="padding:6px 8px;background:#1976d2">Track Delivery</button>`); if(isCancellable(o.status)) actionParts.push(`<button class="btn" onclick="cancelOrder(${idx})" style="padding:6px 8px;background:#f44336">Cancel</button>`); else actionParts.push(`<button class="btn" disabled style="padding:6px 8px;background:#eee;color:#666;cursor:not-allowed">Cancel</button>`); actionParts.push(`<button class="btn" onclick="openOrderDetails(${idx})" style="padding:6px 8px;background:#999">Details</button>`); const tr=document.createElement('tr'); tr.innerHTML = `<td>${o.id}</td><td>${items}</td><td>₱${o.total} ${o.fee>0?`<div class="small">fee: ₱${o.fee}</div>`:''}</td><td>${o.payment}</td><td>${statusTagHTML(o.status)}</td><td>${formatETA(o.etaFrom,o.etaTo)}</td><td><div class="progress-wrap" title="${Math.round(o.progress||0)}%"><div id="${progId}" class="progress-bar" style="width:${o.progress||0}%"></div></div></td><td style="display:flex;gap:6px;flex-wrap:wrap">${actionParts.join('')}</td>`; orderHistoryBody.appendChild(tr); }); }
  function statusTagHTML(status){ if(status==='Pending') return `<span class="status-tag status-pending">Pending</span>`; if(status==='Processing') return `<span class="status-tag status-processing">Processing</span>`; if(status==='Out for Delivery') return `<span class="status-tag status-out">Out for Delivery</span>`; if(status==='Delivered') return `<span class="status-tag status-delivered">Delivered</span>`; if(status==='Cancelled') return `<span class="status-tag status-cancelled">Cancelled</span>`; return `<span class="status-tag">${status}</span>`; }
@@ -476,7 +503,7 @@
 
  /* ---------- markPaid, cancelOrder, details, tracking (UNCHANGED) ---------- */
  function markPaid(index){ const o=orders[index]; if(!o) return; if(o.status!=='Pending'){ alert('Order cannot be marked paid at this time.'); return;} o.status='Processing'; o.progress=5; saveToStorage('ecofix_orders', orders); renderOrders(); addAIMessage(`EcoAssist: Order ${o.id} marked as Paid — processing has started.`); }
- function cancelOrder(index){ const o=orders[index]; if(!o) return; if(!isCancellable(o.status)){ alert('This order cannot be cancelled.'); return;} if(!confirm(`Cancel order ${o.id}? Note: payment fee of ₱${o.fee} (if any) is non-refundable.`)) return; if(o._trackingInterval){ clearInterval(o._trackingInterval); o._trackingInterval=null; } o.status='Cancelled'; o.progress=0; o.cancelledAt=new Date().toLocaleString(); saveToStorage('ecofix_orders', orders); renderOrders(); addAIMessage(`EcoAssist: Order ${o.id} has been cancelled. Payment fee of ₱${o.fee} is non-refundable and will be retained.`); }
+ function cancelOrder(index){ const o=orders[index]; if(!o) return; if(!isCancellable(o.status)){ alert('This order cannot be cancelled.'); return;} if(!confirm(`Cancel order ${o.id}? Note: payment fee of ₱${o.fee} (if any) is non-refundable.`)) return; if(o._trackingInterval){ clearInterval(o._trackingInterval); o._trackingInterval=null; } o.status='Cancelled'; o.progress=0; o.cancelledAt=new Date().toLocaleString(); saveToStorage('ecofix_orders', orders); renderOrders(); addAIMessage(`EcoAssist: Order ${o.id} has been cancelled. Payment fee of ₱${o.fee} is non-refundable and will be retained.`); if(o.customerEmail) sendCancelEmail(o.customerEmail, o.id); }
  function openOrderDetails(index){ const o=orders[index]; if(!o) return; document.getElementById('receiptModal').style.display='flex'; document.getElementById('receiptMeta').innerText=`Order #${o.id} · ${o.placedAt} · ${o.payment}`; document.getElementById('rName').innerText='(Order details)'; document.getElementById('rAddress').innerText=''; receiptItems.innerHTML=''; o.items.forEach(it=>{ const r=document.createElement('tr'); r.innerHTML=`<td>${it.name} x${it.qty}</td><td style="text-align:right">₱${it.price*it.qty}</td>`; receiptItems.appendChild(r); }); receiptTotal.innerHTML=`<div class="small">Subtotal: ₱${o.subtotal}</div><div class="small">Processing fee: ₱${o.fee}</div><div class="total">Total: ₱${o.total}</div><div class="small">Estimated Delivery: ${formatETA(o.etaFrom,o.etaTo)}</div>${o.cancelledAt?`<div class="small" style="color:#8a1f1f">Cancelled at: ${o.cancelledAt}</div>`:''}`; document.getElementById('refundOrderId').value = o.id; }
  function startTracking(index){ const order = orders[index]; if(!order) return; if(order.status==='Delivered'){ alert('Order already delivered.'); return; } if(order.status==='Cancelled'){ alert('Order was cancelled.'); return; } if(order.payment==='COD' && order.status==='Pending'){ if(!confirm('This order is COD and still Pending. Mark it as Paid now to start tracking?')) return; markPaid(index); }
  addAIMessage(`EcoAssist: Tracking started for order ${order.id}.`);
@@ -490,7 +517,7 @@
  }
 
  /* ---------- Refund (UNCHANGED) ---------- */
- document.getElementById('refundBtn').addEventListener('click', ()=>{ const id=document.getElementById('refundOrderId').value.trim(), reason=document.getElementById('refundReason').value.trim(), method=document.getElementById('refundMethod').value; if(!id||!reason||!method){ alert('Please provide Order ID, reason, and refund method.'); return; } document.getElementById('refundConfirm').style.display='block'; addAIMessage(`EcoAssist: Refund request for ${id} received (method: ${method}). Note: payment processing fees (if any) are non-refundable for cancelled orders.`); document.getElementById('refundOrderId').value=''; document.getElementById('refundReason').value=''; document.getElementById('refundMethod').value=''; setTimeout(()=>{ document.getElementById('refundConfirm').style.display='none'; },4000); });
+ document.getElementById('refundBtn').addEventListener('click', ()=>{ const id=document.getElementById('refundOrderId').value.trim(), reason=document.getElementById('refundReason').value.trim(), method=document.getElementById('refundMethod').value; if(!id||!reason||!method){ alert('Please provide Order ID, reason, and refund method.'); return; } document.getElementById('refundConfirm').style.display='block'; addAIMessage(`EcoAssist: Refund request for ${id} received (method: ${method}). Note: payment processing fees (if any) are non-refundable for cancelled orders.`); const o = orders.find(x=>x.id===id); const email = o?.customerEmail || null; if(email) sendRefundEmail(email, id, reason); document.getElementById('refundOrderId').value=''; document.getElementById('refundReason').value=''; document.getElementById('refundMethod').value=''; setTimeout(()=>{ document.getElementById('refundConfirm').style.display='none'; },4000); });
 
  /* ---------- Validation for payment number input (UNCHANGED) ---------- */
  function setupPaymentInputs(){   const gcash = document.getElementById('gcashNumber');   if(gcash){     const required = 11;     attachDigitEnforcer(gcash, required, `Enter exactly ${required} digits for GCash`);   }   const bankName = document.getElementById('bankName');   const bankAcc = document.getElementById('bankAccountNumber');   if(bankName && bankAcc){     function updateBankRules(){       const b = bankName.value;       const len = b === 'BPI' ? 10 : b === 'BDO' ? 12 : b === 'Metrobank' ? 13 : null;       bankAcc.placeholder = len ? `Enter ${len}-digit account number` : 'Account number';       attachDigitEnforcer(bankAcc, len, len ? `Enter exactly ${len} digits for ${b}` : 'Enter account number');     }     bankName.addEventListener('change', updateBankRules);     updateBankRules();   } }
@@ -611,140 +638,19 @@
  function addAIMessage(text){ document.getElementById('chatPanel').style.display = 'flex'; const div=document.createElement('div'); div.className='bubble ai'; div.textContent=text; document.getElementById('chatBody').appendChild(div); document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight; }
 
 
-// === EcoFix Plain Text Email System (Final Fixed Version) ===
 
-// --- Send plain text refund email ---
-function sendRefundEmail(toEmail, orderId, reason) {
-  const endpoint = 'https://formsubmit.co/' + encodeURIComponent('supportecofix@formsubmit.co');
-  const fd = new FormData();
-  fd.append('_subject', 'EcoFix Refund Confirmation 💸');
-  fd.append('_captcha', 'false');
-  fd.append('Order ID', orderId);
-  fd.append('Refund Status', 'Refund Processed');
-  fd.append('Message', `Dear customer,
-
-We’ve processed your refund request for Order ${orderId}.
-Your amount will be credited to your account within 3–5 business days.
-
-Reason for refund: ${reason}
-
-Sincerely,
-EcoFix Team`);
-
-  fetch(endpoint, { method: 'POST', body: fd, mode: 'cors' })
-    .then(res => res.ok ? showEmailToast(`Refund email sent to ${toEmail}`) : showEmailToast('Refund email failed', true))
-    .catch(() => showEmailToast('Refund email failed', true));
-}
-
-// --- Send plain text cancellation email ---
-function sendCancelEmail(toEmail, orderId) {
-  const endpoint = 'https://formsubmit.co/' + encodeURIComponent('supportecofix@formsubmit.co');
-  const fd = new FormData();
-  fd.append('_subject', 'EcoFix Order Cancellation Notice ❌');
-  fd.append('_captcha', 'false');
-  fd.append('Order ID', orderId);
-  fd.append('Status', 'Cancelled');
-  fd.append('Message', `Dear customer,
-
-Your order ${orderId} has been successfully cancelled.
-If payment was made, your refund will be processed and credited back to your account within 3–5 business days.
-
-Sincerely,
-EcoFix Team`);
-
-  fetch(endpoint, { method: 'POST', body: fd, mode: 'cors' })
-    .then(res => res.ok ? showEmailToast(`Cancellation email sent to ${toEmail}`) : showEmailToast('Cancel email failed', true))
-    .catch(() => showEmailToast('Cancel email failed', true));
-}
-
-// --- Override finalizeOrder to capture bank details and email ---
-const oldFinalizeOrder = window.finalizeOrder;
-window.finalizeOrder = function(payload) {
-  const bankName = (document.getElementById('bankName')?.value || 'N/A').trim();
-  const bankAcc = (document.getElementById('bankAccountNumber')?.value || 'N/A').trim();
-  payload.bankName = bankName;
-  payload.bankAcc = bankAcc;
-  payload.email = (document.getElementById('custEmail')?.value || '').trim();
-
-  // continue to old finalizeOrder
-  oldFinalizeOrder(payload);
-};
-
-// --- Override sendFormSubmitEmail to include bank info in plain text ---
-const oldSendFormSubmitEmail = window.sendFormSubmitEmail;
-window.sendFormSubmitEmail = function(order, payload) {
-  const toEmail = (payload.email || '').trim();
-  if (!toEmail) { showEmailToast('Missing customer email', true); return; }
-
-  const itemsStr = (payload.items || []).map(it=>`${it.name} x${it.qty} — ₱${it.price*it.qty}`).join('
-');
-  const etaText = payload.etaFrom && payload.etaTo ? `${payload.etaFrom} – ${payload.etaTo}` : 'N/A';
-  const bankName = payload.bankName || 'N/A';
-  const bankAcc = payload.bankAcc || 'N/A';
-
-  const fd = new FormData();
-  fd.append('_subject', 'EcoFix Order Confirmation 📦');
-  fd.append('_captcha', 'false');
-  fd.append('Order ID', order.id);
-  fd.append('Customer', payload.name);
-  fd.append('Email', toEmail);
-  fd.append('Items', itemsStr);
-  fd.append('Total', `₱${payload.total}`);
-  fd.append('Payment Method', payload.payment);
-  fd.append('Bank Name', bankName);
-  fd.append('Account Number', bankAcc);
-  fd.append('ETA', etaText);
-  fd.append('Message', `Dear ${payload.name},
-
-Thank you for your order with EcoFix. Your order has been confirmed.
-
-Order ID: ${order.id}
-Total: ₱${payload.total}
-Payment Method: ${payload.payment}
-Bank Name: ${bankName}
-Account Number: ${bankAcc}
-Estimated Delivery: ${etaText}
-
-Sincerely,
-EcoFix Team`);
-
-  fetch('https://formsubmit.co/' + encodeURIComponent('supportecofix@formsubmit.co'), {
-    method: 'POST',
-    body: fd,
-    mode: 'cors'
-  }).then(res => {
-    if (res.ok) showEmailToast(`Order confirmation sent to ${toEmail}`);
-    else showEmailToast('Order email failed', true);
-  }).catch(()=>showEmailToast('Order email failed', true));
-};
-
-// --- Override cancelOrder to send cancellation email ---
-const oldCancelOrder = window.cancelOrder;
-window.cancelOrder = function(index) {
-  const o = orders[index];
-  if(!o) return;
-  if(!isCancellable(o.status)) { alert('This order cannot be cancelled.'); return; }
-  if(!confirm(`Cancel order ${o.id}? Note: payment fee of ₱${o.fee} (if any) is non-refundable.`)) return;
-  o.status = 'Cancelled';
-  o.progress = 0;
-  o.cancelledAt = new Date().toLocaleString();
-  saveToStorage('ecofix_orders', orders);
-  renderOrders();
-  addAIMessage(`EcoAssist: Order ${o.id} has been cancelled. Refund is being processed.`);
-  if(o.customerEmail) sendCancelEmail(o.customerEmail, o.id);
-};
-
-// --- Override refund button to send refund email ---
-const refundButton = document.getElementById('refundBtn');
-refundButton.addEventListener('click', ()=>{
-  const id=document.getElementById('refundOrderId').value.trim();
-  const reason=document.getElementById('refundReason').value.trim();
-  const method=document.getElementById('refundMethod').value;
-  if(!id||!reason||!method){ alert('Please provide Order ID, reason, and refund method.'); return; }
-  const o = orders.find(x=>x.id===id);
-  const email = o?.customerEmail || prompt('Enter your email for refund confirmation:');
-  if(email) sendRefundEmail(email, id, reason);
-});
+// --- Safety: re-attach add-to-cart listeners and payment observer in case they were lost ---
+(function ensureUIHandlers(){
+  try{
+    document.querySelectorAll('.add-to-cart').forEach(btn=>{
+      if(!btn._hasListener){
+        btn.addEventListener('click', e=>addToCartFromBtn(e.target));
+        btn._hasListener = true;
+      }
+    });
+    if(typeof setupPaymentFieldObserver === 'function') setupPaymentFieldObserver();
+  }catch(e){ console.warn('ensureUIHandlers error', e); }
+})();
 
 </script>
 </body>
