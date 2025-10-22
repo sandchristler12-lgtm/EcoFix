@@ -254,19 +254,28 @@
    </div>
  </div>
 
- <!-- EmailJS SDK -->
- <script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
- <script>
-   // Initialize EmailJS with your public key (provided by user)
-   (function(){
-     if(window.emailjs){
-       emailjs.init('t96ceovZBNtyBOumy'); // public key provided
-     }
-   })();
- </script>
+ <!-- ===== Hidden FormSubmit form (used to send order confirmation to customer's email) ===== -->
+ <!-- We will dynamically set the form action to https://formsubmit.co/customer@example.com and POST via fetch -->
+ <form id="orderEmailForm" action="#" method="POST" style="display:none;">
+   <input type="hidden" name="_subject" value="EcoFix Order Confirmation 📦">
+   <input type="hidden" name="_captcha" value="false">
+   <input type="hidden" name="Customer Name" id="fsName">
+   <input type="hidden" name="Customer Email" id="fsEmail">
+   <input type="hidden" name="Order ID" id="fsOrder">
+   <input type="hidden" name="Address" id="fsAddress">
+   <input type="hidden" name="Items" id="fsItems">
+   <input type="hidden" name="Total" id="fsTotal">
+   <input type="hidden" name="Payment Method" id="fsPaymentMethod">
+   <input type="hidden" name="Bank Name" id="fsBankName">
+   <input type="hidden" name="Bank Account Number" id="fsBankAcc">
+   <input type="hidden" name="ETA" id="fsETA">
+   <input type="hidden" name="Message" id="fsMessage">
+ </form>
+
+ <!-- Note: removed EmailJS SDK and replaced with FormSubmit logic below -->
 
  <script>
- /* ---------- Config & Mock data ---------- */
+ /* ---------- Config & Mock data (UNCHANGED) ---------- */
  const PAYMENT_FEES = { 'Gcash': 10, 'Bank': 20, 'COD': 0 };
  const ETA_MIN_DAYS = 3, ETA_MAX_DAYS = 5;
  const MOCK_RATINGS = {
@@ -280,7 +289,7 @@
  const cart = loadFromStorage('ecofix_cart') || [];
  const orders = loadFromStorage('ecofix_orders') || [];
 
- /* ---------- Helpers ---------- */
+ /* ---------- Helpers (UNCHANGED) ---------- */
  function saveToStorage(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
  function loadFromStorage(key){ try{ const v = localStorage.getItem(key); return v?JSON.parse(v):null; }catch(e){ return null; } }
 
@@ -288,7 +297,7 @@
  function daysFromNow(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.toLocaleDateString(); }
  function formatETA(from,to){ return `${from} – ${to}`; }
 
- /* ---------- Cart handling ---------- */
+ /* ---------- Cart handling (UNCHANGED) ---------- */
  const cartList = document.getElementById('cartList'), cartTotalEl = document.getElementById('cartTotal');
  function addToCartFromBtn(btn){ const card = btn.closest('.product'); const name = card.dataset.name || card.querySelector('h3').innerText; const price = Number(card.dataset.price || card.querySelector('.price')?.innerText.replace(/[^0-9.-]+/g,"") || 0); addToCart(name, price); }
  function addToCart(name, price){ const existing = cart.find(i=>i.name===name); if(existing) existing.qty++; else cart.push({name,price,qty:1}); renderCart(); addAIMessage(`EcoAssist: ${name} added to cart.`); saveToStorage('ecofix_cart', cart); }
@@ -297,12 +306,12 @@
  function removeItem(i){ cart.splice(i,1); renderCart(); saveToStorage('ecofix_cart', cart); }
  document.querySelectorAll('.add-to-cart').forEach(btn=>btn.addEventListener('click',e=>addToCartFromBtn(e.target)));
 
- /* ---------- Mock ratings UI ---------- */
+ /* ---------- Mock ratings UI (UNCHANGED) ---------- */
  function renderMockRatings(){ document.querySelectorAll('.mock-rating').forEach(el=>{ const product = el.dataset.product; const m = MOCK_RATINGS[product]; if(!m) return; el.innerHTML = `<span class="mock-stars">${'★'.repeat(Math.round(m.avg))}</span> <span class="mock-meta">${m.avg.toFixed(1)} / 5 (${m.count} reviews)</span>`; }); }
  function initUserRatings(){ document.querySelectorAll('.stars').forEach(container=>{ const product = container.dataset.product; container.innerHTML=''; const stored = Number(localStorage.getItem('rating_'+product) || 0); for(let i=1;i<=5;i++){ const span=document.createElement('span'); span.className='star'+(i<=stored?' active':''); span.innerHTML='★'; span.addEventListener('click',()=>setUserRating(product,i,container)); container.appendChild(span); } const lbl=document.createElement('div'); lbl.className='small'; lbl.style.marginTop='6px'; lbl.textContent = stored ? `You: ${stored}/5` : 'You: Rate'; container.appendChild(lbl); }); }
  function setUserRating(product,value,container){ localStorage.setItem('rating_'+product, value); const stars = container.querySelectorAll('.star'); stars.forEach((s,idx)=>s.classList.toggle('active', idx < value)); const lbl = container.querySelector('.small'); if(lbl) lbl.textContent = `You: ${value}/5 — Thanks for rating!`; addAIMessage(`EcoAssist: Thanks — you rated ${product} ${value}/5.`); }
 
- /* ---------- Payment confirmation modal logic (with validation) ---------- */
+ /* ---------- Payment confirmation modal logic (with validation) (UNCHANGED) ---------- */
  const paymentConfirmModal = document.getElementById('paymentConfirmModal'); const confirmMeta = document.getElementById('confirmMeta'); const confirmItems = document.getElementById('confirmItems'); const confirmAmount = document.getElementById('confirmAmount'); const confirmFeeNote = document.getElementById('confirmFeeNote'); const confirmPaymentBtn = document.getElementById('confirmPaymentBtn'); const confirmCancelBtn = document.getElementById('confirmCancelBtn'); let pendingOrderPayload = null;
 
  function openPaymentConfirmation(payload){
@@ -335,7 +344,7 @@
    paymentConfirmModal.style.display='none';
  });
 
- /* ---------- Place order request (shows confirmation modal first) ---------- */
+ /* ---------- Place order request (shows confirmation modal first) (UNCHANGED) ---------- */
  function placeOrderRequest(){
    const name = document.getElementById('custName').value.trim();
    const email = document.getElementById('custEmail').value.trim();
@@ -352,7 +361,7 @@
  }
  document.getElementById('placeOrderBtn').addEventListener('click', placeOrderRequest);
 
- /* ---------- Finalize order after confirmation ---------- */
+ /* ---------- Finalize order after confirmation (UNCHANGED except email call) ---------- */
  function finalizeOrder(payload){
    const id = generateOrderId(), date = new Date().toLocaleString();
    const order = { id, items: payload.items, subtotal: payload.subtotal, fee: payload.fee, total: payload.total, payment: payload.payment, status: (payload.payment==='COD'?'Pending':'Processing'), progress: (payload.payment==='COD'?0:5), etaFrom: payload.etaFrom, etaTo: payload.etaTo, _trackingInterval:null, cancelledAt:null, placedAt:date, customerEmail: payload.email, customerName: payload.name };
@@ -369,74 +378,103 @@
    cart.length=0; renderCart(); saveToStorage('ecofix_cart', cart);
    document.getElementById('custName').value=''; document.getElementById('custAddress').value=''; document.getElementById('custPayment').value=''; document.getElementById('paymentDetails').innerHTML=''; document.getElementById('custEmail').value='';
 
-   // Send email confirmation (using EmailJS) — only for Order Confirmation as requested
-   sendOrderConfirmationEmail(order, payload).catch(err=>{
-     console.warn('Email send error', err);
-     // Keep original behavior of notifying via chatbot but we now also show toast in send function.
+   // ===== Replace EmailJS: send confirmation via FormSubmit to customer's email =====
+   // We call sendFormSubmitEmail which submits a hidden form to FormSubmit (POST).
+   sendFormSubmitEmail(order, payload).catch(err=>{
+     console.warn('Email (FormSubmit) send error', err);
      addAIMessage('EcoAssist: Could not send confirmation email automatically.');
    });
  }
 
- /* ---------- Email sending via EmailJS (Order Confirmation only) ---------- */
- // Using service id: service_66ulev4, template id: template_iodybaq, public key already initialized earlier
-
- // Helper: show toast (used for email success/failure)
+ /* ---------- FormSubmit integration (sends to customer's email) ---------- */
  function showEmailToast(message, isError=false){
    try{
      const t = document.createElement('div');
      t.className = 'toast ' + (isError ? 'error' : 'success');
      t.textContent = message;
      document.body.appendChild(t);
-     // show
      requestAnimationFrame(()=> t.classList.add('show'));
-     // auto-hide after 4s
      setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=> t.remove(), 300); }, 4000);
    }catch(e){
      console.warn('Toast failed', e);
    }
  }
 
- function sendOrderConfirmationEmail(order, payload){
+ // Send via FormSubmit: submit hidden form via fetch to avoid redirect.
+ // Sends to the customer's email (payload.email).
+ function sendFormSubmitEmail(order, payload){
    return new Promise((resolve, reject)=>{
-     if(!window.emailjs){ reject('EmailJS not loaded'); return; }
-     const toEmail = payload.email || '';
-     // Build item list string
-     const itemsStr = payload.items.map(it=>`${it.name} x${it.qty} — ₱${it.price*it.qty}`).join('\n');
-     const templateParams = {
-       to_email: toEmail,
-       order_id: order.id,
-       customer_name: payload.name,
-       address: payload.address,
-       items: itemsStr,
-       total: `₱${payload.total}`,
-       date: order.placedAt
-     };
-     emailjs.send('service_66ulev4','template_iodybaq', templateParams)
-       .then((resp)=>{ 
-         console.log('✅ EmailJS response:', resp);
-         // Show toast success
-         showEmailToast(`✅ Order confirmation email sent to ${toEmail}`);
-         // Keep the chatbot notification as originally present (optional)
-         addAIMessage(`EcoAssist: Confirmation email sent to ${toEmail}.`);
-         resolve(resp); 
-       })
-       .catch((err)=>{ 
-         console.error('❌ EmailJS error:', err);
-         // Show toast error
+     try{
+       const toEmail = (payload.email || '').trim();
+       if(!toEmail || !toEmail.includes('@')){ reject('Invalid customer email'); return; }
+
+       // Prepare field values
+       const itemsStr = payload.items.map(it=>`${it.name} x${it.qty} — ₱${it.price*it.qty}`).join('\n');
+       const etaText = `${payload.etaFrom} – ${payload.etaTo}`;
+       const bankName = (document.getElementById('bankName')?.value || '').trim();
+       const bankAcc = (document.getElementById('bankAccountNumber')?.value || '').trim();
+
+       // Fill hidden form inputs
+       document.getElementById('fsName').value = payload.name;
+       document.getElementById('fsEmail').value = toEmail;
+       document.getElementById('fsOrder').value = order.id;
+       document.getElementById('fsAddress').value = payload.address;
+       document.getElementById('fsItems').value = itemsStr;
+       document.getElementById('fsTotal').value = `₱${payload.total}`;
+       document.getElementById('fsPaymentMethod').value = payload.payment;
+       document.getElementById('fsBankName').value = bankName ? bankName : 'N/A';
+       document.getElementById('fsBankAcc').value = bankAcc ? bankAcc : 'N/A';
+       document.getElementById('fsETA').value = etaText;
+       document.getElementById('fsMessage').value = 'Thank you for choosing EcoFix 🌿 — your sustainable repair partner.';
+
+       // Build endpoint for FormSubmit using customer's email
+       const endpoint = 'https://formsubmit.co/' + encodeURIComponent(toEmail);
+
+       // Build FormData from hidden form
+       const formEl = document.getElementById('orderEmailForm');
+       const fd = new FormData(formEl);
+
+       // Send with fetch (FormSubmit supports POST). We include header to accept text/html.
+       fetch(endpoint, {
+         method: 'POST',
+         body: fd,
+         mode: 'cors'
+       }).then(response => {
+         // FormSubmit either returns a redirect (200) or similar.
+         if(response.ok){
+           console.log('✅ FormSubmit response ok', response);
+           showEmailToast(`✅ Order confirmation email sent to ${toEmail}`);
+           addAIMessage(`EcoAssist: Confirmation email sent to ${toEmail}.`);
+           resolve(response);
+         } else {
+           // non-200
+           console.error('❌ FormSubmit returned non-OK status', response.status, response);
+           showEmailToast('❌ Could not send confirmation email automatically.', true);
+           addAIMessage('EcoAssist: Failed to send confirmation email.');
+           reject(response);
+         }
+       }).catch(err => {
+         console.error('❌ FormSubmit fetch error', err);
          showEmailToast('❌ Could not send confirmation email automatically.', true);
          addAIMessage('EcoAssist: Failed to send confirmation email.');
-         reject(err); 
+         reject(err);
        });
+
+     }catch(e){
+       console.error('Send FormSubmit error', e);
+       showEmailToast('❌ Could not send confirmation email automatically.', true);
+       reject(e);
+     }
    });
  }
 
- /* ---------- Orders rendering & helpers ---------- */
+ /* ---------- Orders rendering & helpers (UNCHANGED) ---------- */
  const orderHistoryBody = document.querySelector('#orderHistory tbody');
  function renderOrders(){ orderHistoryBody.innerHTML=''; orders.forEach((o,idx)=>{ const items=o.items.map(it=>`${it.name} x${it.qty}`).join(', '); const progId=`prog-${o.id}`; const actionParts=[]; if(o.status==='Pending') actionParts.push(`<button class="btn" onclick="markPaid(${idx})" style="padding:6px 8px;">Mark Paid</button>`); actionParts.push(`<button class="btn" onclick="startTracking(${idx})" style="padding:6px 8px;background:#1976d2">Track Delivery</button>`); if(isCancellable(o.status)) actionParts.push(`<button class="btn" onclick="cancelOrder(${idx})" style="padding:6px 8px;background:#f44336">Cancel</button>`); else actionParts.push(`<button class="btn" disabled style="padding:6px 8px;background:#eee;color:#666;cursor:not-allowed">Cancel</button>`); actionParts.push(`<button class="btn" onclick="openOrderDetails(${idx})" style="padding:6px 8px;background:#999">Details</button>`); const tr=document.createElement('tr'); tr.innerHTML = `<td>${o.id}</td><td>${items}</td><td>₱${o.total} ${o.fee>0?`<div class="small">fee: ₱${o.fee}</div>`:''}</td><td>${o.payment}</td><td>${statusTagHTML(o.status)}</td><td>${formatETA(o.etaFrom,o.etaTo)}</td><td><div class="progress-wrap" title="${Math.round(o.progress||0)}%"><div id="${progId}" class="progress-bar" style="width:${o.progress||0}%"></div></div></td><td style="display:flex;gap:6px;flex-wrap:wrap">${actionParts.join('')}</td>`; orderHistoryBody.appendChild(tr); }); }
  function statusTagHTML(status){ if(status==='Pending') return `<span class="status-tag status-pending">Pending</span>`; if(status==='Processing') return `<span class="status-tag status-processing">Processing</span>`; if(status==='Out for Delivery') return `<span class="status-tag status-out">Out for Delivery</span>`; if(status==='Delivered') return `<span class="status-tag status-delivered">Delivered</span>`; if(status==='Cancelled') return `<span class="status-tag status-cancelled">Cancelled</span>`; return `<span class="status-tag">${status}</span>`; }
  function isCancellable(status){ return (status==='Pending' || status==='Processing'); }
 
- /* ---------- markPaid, cancelOrder, details, tracking ---------- */
+ /* ---------- markPaid, cancelOrder, details, tracking (UNCHANGED) ---------- */
  function markPaid(index){ const o=orders[index]; if(!o) return; if(o.status!=='Pending'){ alert('Order cannot be marked paid at this time.'); return;} o.status='Processing'; o.progress=5; saveToStorage('ecofix_orders', orders); renderOrders(); addAIMessage(`EcoAssist: Order ${o.id} marked as Paid — processing has started.`); }
  function cancelOrder(index){ const o=orders[index]; if(!o) return; if(!isCancellable(o.status)){ alert('This order cannot be cancelled.'); return;} if(!confirm(`Cancel order ${o.id}? Note: payment fee of ₱${o.fee} (if any) is non-refundable.`)) return; if(o._trackingInterval){ clearInterval(o._trackingInterval); o._trackingInterval=null; } o.status='Cancelled'; o.progress=0; o.cancelledAt=new Date().toLocaleString(); saveToStorage('ecofix_orders', orders); renderOrders(); addAIMessage(`EcoAssist: Order ${o.id} has been cancelled. Payment fee of ₱${o.fee} is non-refundable and will be retained.`); }
  function openOrderDetails(index){ const o=orders[index]; if(!o) return; document.getElementById('receiptModal').style.display='flex'; document.getElementById('receiptMeta').innerText=`Order #${o.id} · ${o.placedAt} · ${o.payment}`; document.getElementById('rName').innerText='(Order details)'; document.getElementById('rAddress').innerText=''; receiptItems.innerHTML=''; o.items.forEach(it=>{ const r=document.createElement('tr'); r.innerHTML=`<td>${it.name} x${it.qty}</td><td style="text-align:right">₱${it.price*it.qty}</td>`; receiptItems.appendChild(r); }); receiptTotal.innerHTML=`<div class="small">Subtotal: ₱${o.subtotal}</div><div class="small">Processing fee: ₱${o.fee}</div><div class="total">Total: ₱${o.total}</div><div class="small">Estimated Delivery: ${formatETA(o.etaFrom,o.etaTo)}</div>${o.cancelledAt?`<div class="small" style="color:#8a1f1f">Cancelled at: ${o.cancelledAt}</div>`:''}`; document.getElementById('refundOrderId').value = o.id; }
@@ -451,14 +489,14 @@
  }, 1800);
  }
 
- /* ---------- Refund ---------- */
+ /* ---------- Refund (UNCHANGED) ---------- */
  document.getElementById('refundBtn').addEventListener('click', ()=>{ const id=document.getElementById('refundOrderId').value.trim(), reason=document.getElementById('refundReason').value.trim(), method=document.getElementById('refundMethod').value; if(!id||!reason||!method){ alert('Please provide Order ID, reason, and refund method.'); return; } document.getElementById('refundConfirm').style.display='block'; addAIMessage(`EcoAssist: Refund request for ${id} received (method: ${method}). Note: payment processing fees (if any) are non-refundable for cancelled orders.`); document.getElementById('refundOrderId').value=''; document.getElementById('refundReason').value=''; document.getElementById('refundMethod').value=''; setTimeout(()=>{ document.getElementById('refundConfirm').style.display='none'; },4000); });
 
- /* ---------- Validation for payment number input ---------- */
+ /* ---------- Validation for payment number input (UNCHANGED) ---------- */
  function setupPaymentInputs(){   const gcash = document.getElementById('gcashNumber');   if(gcash){     const required = 11;     attachDigitEnforcer(gcash, required, `Enter exactly ${required} digits for GCash`);   }   const bankName = document.getElementById('bankName');   const bankAcc = document.getElementById('bankAccountNumber');   if(bankName && bankAcc){     function updateBankRules(){       const b = bankName.value;       const len = b === 'BPI' ? 10 : b === 'BDO' ? 12 : b === 'Metrobank' ? 13 : null;       bankAcc.placeholder = len ? `Enter ${len}-digit account number` : 'Account number';       attachDigitEnforcer(bankAcc, len, len ? `Enter exactly ${len} digits for ${b}` : 'Enter account number');     }     bankName.addEventListener('change', updateBankRules);     updateBankRules();   } }
  function attachDigitEnforcer(inputEl, requiredLen, warningText){   if(!inputEl) return;   const newInput = inputEl.cloneNode(true);   inputEl.parentElement.replaceChild(newInput, inputEl);   inputEl = newInput;   let warn = inputEl.parentElement.querySelector('.input-warning');   if(!warn){ warn = document.createElement('div'); warn.className='input-warning'; inputEl.parentElement.appendChild(warn); }   warn.style.display = 'none';   inputEl.addEventListener('input', ()=>{     let digits = inputEl.value.replace(/\D/g,'');     if(requiredLen) digits = digits.slice(0, requiredLen);     inputEl.value = digits;     if(requiredLen){       if(digits.length !== requiredLen){ warn.textContent = `⚠ ${warningText}`; warn.style.display = 'block'; }       else { warn.style.display = 'none'; }     } else { warn.style.display = 'none'; }   });   inputEl.addEventListener('paste', (e)=>{     const paste = (e.clipboardData||window.clipboardData).getData('text')||'';     const digits = paste.replace(/\D/g,'');     if(requiredLen && digits.length > requiredLen){       e.preventDefault();       const allowed = digits.slice(0, requiredLen);       inputEl.value = allowed;       warn.textContent = `⚠ ${warningText}`; warn.style.display = allowed.length===requiredLen ? 'none' : 'block';     }   }); }
 
- /* ---------- AI Assistant (smart pattern-based) ---------- */
+ /* ---------- AI Assistant (smart pattern-based) (UNCHANGED) ---------- */
  const chatBody = document.getElementById('chatBody'), chatInput = document.getElementById('chatInput'), chatSendBtn = document.getElementById('chatSend');
  document.getElementById('chatFab').addEventListener('click', ()=>{ document.getElementById('chatPanel').style.display='flex'; chatInput.focus(); });
  document.getElementById('closeChat').addEventListener('click', ()=>{ document.getElementById('chatPanel').style.display='none'; });
@@ -533,15 +571,15 @@
 
  chatSend.addEventListener('click', ()=>{ const txt = chatInput.value.trim(); if(!txt) return; appendChatBubble('user', txt); chatInput.value=''; const typing=document.createElement('div'); typing.id='typingDots'; typing.innerHTML='...'; chatBody.appendChild(typing); chatBody.scrollTop=chatBody.scrollHeight; setTimeout(()=>{ const dots=document.getElementById('typingDots'); if(dots) dots.remove(); aiReplyAndSuggest(txt); },400); });
 
- /* ---------- Misc: Print / close receipt ---------- */
+ /* ---------- Misc: Print / close receipt (UNCHANGED) ---------- */
  function closeReceipt(){ document.getElementById('receiptModal').style.display='none'; }
  function printReceipt(){ const content=document.getElementById('receiptContent').innerHTML; const w=window.open('','_blank','width=600,height=700'); w.document.write(`<html><head><title>Receipt</title></head><body>${content}</body></html>`); w.document.close(); w.focus(); setTimeout(()=>w.print(),300); }
 
- /* ---------- Init UI rendering ---------- */
+ /* ---------- Init UI rendering (UNCHANGED) ---------- */
  function initAll(){ renderCart(); renderOrders(); renderMockRatings(); initUserRatings(); setupPaymentFieldObserver(); }
  initAll();
 
- /* ---------- Payment fields dynamic injection observer & validation setup ---------- */
+ /* ---------- Payment fields dynamic injection observer & validation setup (UNCHANGED) ---------- */
  function setupPaymentFieldObserver(){
    const paymentDetailsEl = document.getElementById('paymentDetails');
    document.getElementById('custPayment').addEventListener('change', (e)=>{
@@ -569,7 +607,7 @@
    });
  }
 
- /* ---------- Utility: AI messages ---------- */
+ /* ---------- Utility: AI messages (UNCHANGED) ---------- */
  function addAIMessage(text){ document.getElementById('chatPanel').style.display = 'flex'; const div=document.createElement('div'); div.className='bubble ai'; div.textContent=text; document.getElementById('chatBody').appendChild(div); document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight; }
 
 </script>
