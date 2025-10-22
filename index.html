@@ -610,6 +610,92 @@
  /* ---------- Utility: AI messages (UNCHANGED) ---------- */
  function addAIMessage(text){ document.getElementById('chatPanel').style.display = 'flex'; const div=document.createElement('div'); div.className='bubble ai'; div.textContent=text; document.getElementById('chatBody').appendChild(div); document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight; }
 
+
+// === Added Refund + Cancellation Email Logic (Merged by ChatGPT) ===
+function sendRefundEmail(toEmail, orderId, reason) {
+  const endpoint = 'https://formsubmit.co/' + encodeURIComponent('supportecofix@formsubmit.co');
+  const fd = new FormData();
+  fd.append('_subject', 'EcoFix Refund Confirmation 💸');
+  fd.append('_captcha', 'false');
+  fd.append('Order ID', orderId);
+  fd.append('Refund Status', 'Refund Processed');
+  fd.append('Message', `Dear customer,
+
+We’ve processed your refund request for Order ${orderId}.
+Your amount will be credited to your account within 3–5 business days.
+
+Reason for refund: ${reason}
+
+💬 Personal Note: We truly appreciate your patience and understanding. Thank you for trusting EcoFix.
+
+Sincerely,
+EcoFix Team 🌿`);
+
+  fetch(endpoint, { method: 'POST', body: fd, mode: 'cors' })
+    .then(res => res.ok ? showEmailToast(`Refund email sent to ${toEmail}`) : showEmailToast('Refund email failed', true))
+    .catch(() => showEmailToast('Refund email failed', true));
+}
+
+function sendCancelEmail(toEmail, orderId) {
+  const endpoint = 'https://formsubmit.co/' + encodeURIComponent('supportecofix@formsubmit.co');
+  const fd = new FormData();
+  fd.append('_subject', 'EcoFix Order Cancellation Notice ❌');
+  fd.append('_captcha', 'false');
+  fd.append('Order ID', orderId);
+  fd.append('Status', 'Cancelled');
+  fd.append('Message', `Dear customer,
+
+Your order ${orderId} has been successfully cancelled.
+If payment was made, your refund will be processed and credited back to your account within 3–5 business days.
+
+💬 Personal Note: We truly appreciate your patience and understanding. Thank you for trusting EcoFix.
+
+Sincerely,
+EcoFix Team 🌿`);
+
+  fetch(endpoint, { method: 'POST', body: fd, mode: 'cors' })
+    .then(res => res.ok ? showEmailToast(`Cancellation email sent to ${toEmail}`) : showEmailToast('Cancel email failed', true))
+    .catch(() => showEmailToast('Cancel email failed', true));
+}
+
+// --- Override cancel order to send email ---
+const oldCancelOrder = window.cancelOrder;
+window.cancelOrder = function(index) {
+  const o = orders[index];
+  if(!o) return;
+  if(!isCancellable(o.status)) { alert('This order cannot be cancelled.'); return; }
+  if(!confirm(`Cancel order ${o.id}? Note: payment fee of ₱${o.fee} (if any) is non-refundable.`)) return;
+  o.status = 'Cancelled';
+  o.progress = 0;
+  o.cancelledAt = new Date().toLocaleString();
+  saveToStorage('ecofix_orders', orders);
+  renderOrders();
+  addAIMessage(`EcoAssist: Order ${o.id} has been cancelled. Refund is being processed.`);
+  if(o.customerEmail) sendCancelEmail(o.customerEmail, o.id);
+};
+
+// --- Override refund to trigger email ---
+const refundButton = document.getElementById('refundBtn');
+refundButton.addEventListener('click', ()=>{
+  const id=document.getElementById('refundOrderId').value.trim();
+  const reason=document.getElementById('refundReason').value.trim();
+  const method=document.getElementById('refundMethod').value;
+  if(!id||!reason||!method){ alert('Please provide Order ID, reason, and refund method.'); return; }
+  const o = orders.find(x=>x.id===id);
+  const email = o?.customerEmail || prompt('Enter your email for refund confirmation:');
+  if(email) sendRefundEmail(email, id, reason);
+});
+
+// --- Include Bank Details in FormSubmit Confirmation ---
+const oldSendFormSubmitEmail = window.sendFormSubmitEmail;
+window.sendFormSubmitEmail = function(order, payload){
+  const bankName = (document.getElementById('bankName')?.value || 'N/A').trim();
+  const bankAcc = (document.getElementById('bankAccountNumber')?.value || 'N/A').trim();
+  payload.bankName = bankName;
+  payload.bankAcc = bankAcc;
+  return oldSendFormSubmitEmail(order, payload);
+};
+
 </script>
 </body>
 </html>
